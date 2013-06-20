@@ -1,0 +1,11 @@
+*~
+Makefile.in
+aclocal.m4
+autom4te.cache
+build
+configure
+depcomp
+install-sh
+missing
+src/Makefile.in
+src/config.hpp.in
