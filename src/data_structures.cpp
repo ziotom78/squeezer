@@ -29,12 +29,23 @@
 
 //////////////////////////////////////////////////////////////////////
 
-Detpoint_file_header_t::Detpoint_file_header_t()
+Squeezer_file_header_t::Squeezer_file_header_t(Squeezer_file_type_t type)
 {
-    file_type_mark[0] = 'P';
-    file_type_mark[1] = 'D';
-    file_type_mark[2] = 'P';
-    file_type_mark[3] = 0;
+    switch(type) {
+    case SQZ_NO_DATA:
+	memset(file_type_mark, 0, sizeof(file_type_mark));
+	break;
+
+    case SQZ_DETECTOR_POINTINGS:
+	strcpy((char *) file_type_mark, "PDP");
+	break;
+
+    case SQZ_DIFFERENCED_DATA:
+	strcpy((char *) file_type_mark, "PDD");
+	break;
+    default:
+	abort();
+    }
 
     program_version = PROGRAM_VERSION;
     floating_point_check = 2.3125e+5;
@@ -63,7 +74,7 @@ Detpoint_file_header_t::Detpoint_file_header_t()
 //////////////////////////////////////////////////////////////////////
 
 void 
-Detpoint_file_header_t::read_from_file(FILE * in)
+Squeezer_file_header_t::read_from_file(FILE * in)
 {
     file_type_mark[0] = read_uint8(in);
     file_type_mark[1] = read_uint8(in);
@@ -93,7 +104,7 @@ Detpoint_file_header_t::read_from_file(FILE * in)
 //////////////////////////////////////////////////////////////////////
 
 void 
-Detpoint_file_header_t::write_to_file(FILE * out) const
+Squeezer_file_header_t::write_to_file(FILE * out) const
 {
     write_uint8(out, file_type_mark[0]);
     write_uint8(out, file_type_mark[1]);
@@ -123,12 +134,10 @@ Detpoint_file_header_t::write_to_file(FILE * out) const
 //////////////////////////////////////////////////////////////////////
 
 bool
-Detpoint_file_header_t::is_valid() const
+Squeezer_file_header_t::is_valid() const
 {
-    if(file_type_mark[0] != 'P' ||
-       file_type_mark[1] != 'D' ||
-       file_type_mark[2] != 'P' ||
-       file_type_mark[3] != 0 ||
+    if((strcmp((char *) file_type_mark, "PDP") != 0 && 
+	strcmp((char *) file_type_mark, "PDD") != 0) ||
        date_year < 2013 ||
        date_month < 1 || date_month > 12 ||
        date_day < 1 || date_day > 31 ||
@@ -148,7 +157,7 @@ Detpoint_file_header_t::is_valid() const
 //////////////////////////////////////////////////////////////////////
 
 bool
-Detpoint_file_header_t::is_compatible_version() const
+Squeezer_file_header_t::is_compatible_version() const
 {
     if(MAJOR_VERSION_FROM_UINT16(program_version) <= MAJOR_PROGRAM_VERSION)
 	return true;
@@ -203,7 +212,7 @@ Error_t::is_valid() const
 
 //////////////////////////////////////////////////////////////////////
 
-Detpoint_chunk_header_t::Detpoint_chunk_header_t() 
+Squeezer_chunk_header_t::Squeezer_chunk_header_t() 
 {
     chunk_mark[0] = 'C';
     chunk_mark[1] = 'N';
@@ -219,7 +228,7 @@ Detpoint_chunk_header_t::Detpoint_chunk_header_t()
 //////////////////////////////////////////////////////////////////////
 
 void
-Detpoint_chunk_header_t::read_from_file(FILE * in)
+Squeezer_chunk_header_t::read_from_file(FILE * in)
 {
     chunk_mark[0] = read_uint8(in);
     chunk_mark[1] = read_uint8(in);
@@ -237,7 +246,7 @@ Detpoint_chunk_header_t::read_from_file(FILE * in)
 //////////////////////////////////////////////////////////////////////
 
 void
-Detpoint_chunk_header_t::write_to_file(FILE * out) const
+Squeezer_chunk_header_t::write_to_file(FILE * out) const
 {
     write_uint8(out, chunk_mark[0]);
     write_uint8(out, chunk_mark[1]);
@@ -255,7 +264,7 @@ Detpoint_chunk_header_t::write_to_file(FILE * out) const
 //////////////////////////////////////////////////////////////////////
 
 bool
-Detpoint_chunk_header_t::is_valid() const
+Squeezer_chunk_header_t::is_valid() const
 {
     if(chunk_mark[0] != 'C' ||
        chunk_mark[1] != 'N' ||

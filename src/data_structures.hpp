@@ -27,7 +27,13 @@
 
 extern const uint16_t program_version;
 
-struct Detpoint_file_header_t {
+enum Squeezer_file_type_t { 
+    SQZ_NO_DATA,
+    SQZ_DETECTOR_POINTINGS, 
+    SQZ_DIFFERENCED_DATA 
+};
+
+struct Squeezer_file_header_t {
     uint8_t file_type_mark[4];
     double floating_point_check;
 
@@ -54,7 +60,7 @@ struct Detpoint_file_header_t {
 
     uint32_t number_of_chunks;
 
-    Detpoint_file_header_t();
+    Squeezer_file_header_t(Squeezer_file_type_t type);
 
     void read_from_file(FILE * in);
     void write_to_file(FILE * out) const;
@@ -81,7 +87,7 @@ struct Error_t {
 
 //////////////////////////////////////////////////////////////////////
 
-struct Detpoint_chunk_header_t {
+struct Squeezer_chunk_header_t {
     uint8_t chunk_mark[4];
     uint64_t number_of_bytes;
     uint32_t number_of_samples;
@@ -90,7 +96,7 @@ struct Detpoint_chunk_header_t {
 
     Error_t compression_error;
 
-    Detpoint_chunk_header_t();
+    Squeezer_chunk_header_t();
 
     void read_from_file(FILE * in);
     void write_to_file(FILE * out) const;

@@ -294,7 +294,7 @@ run_decompression_task(const std::vector<std::string> & list_of_arguments)
 //////////////////////////////////////////////////////////////////////
 
 void
-dump_file_header_to_stdout(const Detpoint_file_header_t & file_header)
+dump_file_header_to_stdout(const Squeezer_file_header_t & file_header)
 {
     std::printf("File format version: %d.%d (0x%04x)\n",
 		MAJOR_VERSION_FROM_UINT16(file_header.program_version),
@@ -347,7 +347,7 @@ sensible_size(uint32_t size)
 
 void
 dump_chunk_header_to_stdout(size_t index,
-			    const Detpoint_chunk_header_t & chunk_header)
+			    const Squeezer_chunk_header_t & chunk_header)
 {
     std::printf("Chunk #%lu: ", index + 1);
     switch(chunk_header.chunk_type) {
@@ -409,7 +409,7 @@ run_statistics_task(const std::vector<std::string> & list_of_arguments)
 
     }
 
-    Detpoint_file_header_t file_header;
+    Squeezer_file_header_t file_header(SQZ_NO_DATA);
     file_header.read_from_file(input_file);
     if(! file_header.is_valid()) {
 	std::cerr << PROGRAM_NAME
@@ -425,7 +425,7 @@ run_statistics_task(const std::vector<std::string> & list_of_arguments)
 	chunk_idx < file_header.number_of_chunks; 
 	++chunk_idx) {
 
-	Detpoint_chunk_header_t chunk_header;
+	Squeezer_chunk_header_t chunk_header;
 	chunk_header.read_from_file(input_file);
 	if(! chunk_header.is_valid()) {
 	    std::cerr << PROGRAM_NAME

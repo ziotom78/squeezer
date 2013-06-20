@@ -56,7 +56,7 @@ decompress_obt_times(Byte_buffer_t & buffer,
 
 void
 decompress_scet_times(Byte_buffer_t & buffer,
-		      const Detpoint_file_header_t & file_header,
+		      const Squeezer_file_header_t & file_header,
 		      const std::vector<double> & obt_times,
 		      std::vector<double> & dest)
 {
@@ -103,8 +103,8 @@ decompress_angles(Byte_buffer_t & buffer,
 
 void
 decompress_chunk(size_t chunk_idx,
-		 const Detpoint_file_header_t & file_header,
-		 const Detpoint_chunk_header_t & chunk_header,
+		 const Squeezer_file_header_t & file_header,
+		 const Squeezer_chunk_header_t & chunk_header,
 		 FILE * input_file,
 		 const Decompression_parameters_t & params,
 		 Detector_pointings_t & detpoints)
@@ -210,7 +210,7 @@ decompress_detpoints_from_file(FILE * input_file,
 		  << output_file_name << '\n';
     }
 
-    Detpoint_file_header_t file_header;
+    Squeezer_file_header_t file_header(SQZ_DETECTOR_POINTINGS);
     file_header.read_from_file(input_file);
     if(! file_header.is_valid()) {
 	std::cerr << PROGRAM_NAME
@@ -245,7 +245,7 @@ decompress_detpoints_from_file(FILE * input_file,
 
     for(size_t idx = 0; idx < file_header.number_of_chunks; ++idx) {
 
-	Detpoint_chunk_header_t chunk_header;
+	Squeezer_chunk_header_t chunk_header;
 	chunk_header.read_from_file(input_file);
 
 	decompress_chunk(idx, 

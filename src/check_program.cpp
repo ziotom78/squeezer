@@ -436,7 +436,7 @@ public:
     void testFileHeaderIO() {
 	FILE * f = fopen("./delete_me.bin", "wb");
 	
-	Detpoint_file_header_t source;
+	Squeezer_file_header_t source(SQZ_DETECTOR_POINTINGS);
 
 	source.date_year = 2013;
 	source.date_month = 12;
@@ -461,7 +461,7 @@ public:
 
 	f = fopen("./delete_me.bin", "rb");
 
-	Detpoint_file_header_t test;
+	Squeezer_file_header_t test(SQZ_NO_DATA);
 	test.read_from_file(f);
 
 	fclose(f);
@@ -501,7 +501,7 @@ public:
     void testChunkHeaderIO() {
 	FILE * f = fopen("./delete_me.bin", "wb");
 	
-	Detpoint_chunk_header_t source;
+	Squeezer_chunk_header_t source;
 
 	source.number_of_bytes = 16532;
 	source.number_of_samples = 723465;
@@ -517,7 +517,7 @@ public:
 
 	f = fopen("./delete_me.bin", "rb");
 
-	Detpoint_chunk_header_t test;
+	Squeezer_chunk_header_t test;
 	test.read_from_file(f);
 
 	fclose(f);

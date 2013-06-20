@@ -47,7 +47,7 @@ rad2arcmin(double x)
 //////////////////////////////////////////////////////////////////////
 
 void
-initialize_file_header(Detpoint_file_header_t & file_header,
+initialize_file_header(Squeezer_file_header_t & file_header,
 		       const Detector_pointings_t & detpoints,
 		       const Compression_parameters_t & params)
 {
@@ -80,7 +80,7 @@ compress_obt(const std::vector<double> & obt,
 		    obt_delta.size(),
 		    obt_delta_buffer);
 
-    Detpoint_chunk_header_t chunk_header;
+    Squeezer_chunk_header_t chunk_header;
     chunk_header.number_of_bytes = obt_delta_buffer.buffer.size();
     chunk_header.number_of_samples = obt_delta.size();
     chunk_header.chunk_type = CHUNK_DELTA_OBT;
@@ -174,7 +174,7 @@ compress_scet(const std::vector<double> & scet,
 	buffer.append_float(value);
     }
 
-    Detpoint_chunk_header_t chunk_header;
+    Squeezer_chunk_header_t chunk_header;
     chunk_header.number_of_bytes = buffer.buffer.size();
     chunk_header.number_of_samples = scet_interp_error.size();
     chunk_header.chunk_type = CHUNK_SCET_ERROR;
@@ -269,7 +269,7 @@ compress_angle(const std::vector<double> & angle,
 		    num_of_frames,
 		    num_of_frames_encoded_directly);
     
-    Detpoint_chunk_header_t chunk_header;
+    Squeezer_chunk_header_t chunk_header;
     chunk_header.number_of_bytes = output_buffer.size();
     chunk_header.number_of_samples = angle.size();
     chunk_header.chunk_type = chunk_type;
@@ -348,7 +348,7 @@ compress_detpoints_to_file(const std::string & input_file_name,
         detpoints.read_from_fits_file(input_file_name);
     }
 
-    Detpoint_file_header_t file_header;
+    Squeezer_file_header_t file_header(SQZ_DETECTOR_POINTINGS);
     initialize_file_header(file_header, detpoints, params);
 
     file_header.write_to_file(output_file);
