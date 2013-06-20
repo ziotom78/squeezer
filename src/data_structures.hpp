@@ -27,12 +27,6 @@
 
 extern const uint16_t program_version;
 
-enum Squeezer_file_type_t { 
-    SQZ_NO_DATA,
-    SQZ_DETECTOR_POINTINGS, 
-    SQZ_DIFFERENCED_DATA 
-};
-
 struct Squeezer_file_header_t {
     uint8_t file_type_mark[4];
     double floating_point_check;

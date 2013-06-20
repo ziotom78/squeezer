@@ -46,12 +46,20 @@ struct Radiometer_t {
     std::string to_str() const;
 };
 
+enum Squeezer_file_type_t { 
+    SQZ_NO_DATA,
+    SQZ_DETECTOR_POINTINGS, 
+    SQZ_DIFFERENCED_DATA 
+};
+
 enum Chunk_type_t { 
     CHUNK_DELTA_OBT = 10,
     CHUNK_SCET_ERROR = 11,
     CHUNK_THETA = 12,
     CHUNK_PHI = 13,
-    CHUNK_PSI = 14
+    CHUNK_PSI = 14,
+    CHUNK_DIFFERENCED_DATA = 15,
+    CHUNK_QUALITY_FLAGS = 16
 };
 
 #endif

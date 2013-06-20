@@ -18,45 +18,40 @@
  * 02110-1301, USA.
  */
 
-#ifndef DETPOINT_HPP
-#define DETPOINT_HPP
+#ifndef DATA_CONTAINER_HPP
+#define DATA_CONTAINER_HPP
 
-#include <vector>
-#include <stdexcept>
-
+#include <cstdint>
+#include <string>
 #include <fitsio.h>
 
 #include "config.hpp"
 #include "common_defs.hpp"
-#include "data_container.hpp"
 
 #if HAVE_TOODI
 #include <LowLevelIO.h>
 #endif
 
-struct Detector_pointings_t : public Data_container_t {
-    std::vector<double> obt_times;
-    std::vector<double> scet_times;
-    std::vector<double> theta;
-    std::vector<double> phi;
-    std::vector<double> psi;
+struct Data_container_t {
+    Data_container_t() {}
+    virtual ~Data_container_t() {}
 
-    virtual double first_obt() const  { return obt_times.front(); }
-    virtual double last_obt() const   { return obt_times.back(); }
-    virtual double first_scet() const { return scet_times.front(); }
-    virtual double last_scet() const  { return scet_times.back(); }
+    virtual double first_obt() const = 0;
+    virtual double last_obt() const = 0;
+    virtual double first_scet() const = 0;
+    virtual double last_scet() const = 0;
 
-    virtual size_t number_of_columns() const { return 5; }
+    virtual size_t number_of_columns() const = 0;
 
 #if HAVE_TOODI
-    virtual void read_from_database(const std::string & obj_name);
+    virtual void read_from_database(const std::string & obj_name) = 0;
 #endif
 
-    virtual void read_from_fits_file(const std::string & file_name);
+    virtual void read_from_fits_file(const std::string & file_name) = 0;
     virtual void write_to_fits_file(fitsfile * fptr,
 				    const Radiometer_t & radiometer,
 				    uint16_t od,
-				    int & status);
+				    int & status) = 0;
 };
 
 #endif

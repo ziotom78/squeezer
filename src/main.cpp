@@ -66,9 +66,9 @@ run_compression_task_for_one_file(const std::string radiometer_str,
     std::stringstream ss(od_str);
     ss >> params.od_number;
 
-    compress_detpoints_to_file(input_file_name,
-			       output_file,
-			       params);
+    compress_file_to_file(input_file_name,
+			  output_file,
+			  params);
 
     if(! write_to_stdout) {
         std::fclose(output_file);
@@ -135,12 +135,24 @@ run_compression_task(const std::vector<std::string> & list_of_arguments)
     Compression_parameters_t params;
     size_t cur_argument = 0;
 
+    params.file_type = SQZ_DETECTOR_POINTINGS;
+
     while((! list_of_arguments.empty()) &&
 	  list_of_arguments.at(cur_argument)[0] == '-') {
 
 	if(list_of_arguments.at(cur_argument) == "-v") {
 
 	    params.verbose_flag = true;
+	    cur_argument++;
+
+	} else if(list_of_arguments.at(cur_argument) == "--pointings") {
+
+	    params.file_type = SQZ_DETECTOR_POINTINGS;
+	    cur_argument++;
+
+	} else if(list_of_arguments.at(cur_argument) == "--datadiff") {
+
+	    params.file_type = SQZ_DIFFERENCED_DATA;
 	    cur_argument++;
 
 	} else if(list_of_arguments.at(cur_argument) == "-n") {
@@ -365,6 +377,12 @@ dump_chunk_header_to_stdout(size_t index,
 	break;
     case CHUNK_PSI:
 	std::printf("psi angle (polynomial compression)\n");
+	break;
+    case CHUNK_DIFFERENCED_DATA:
+	std::printf("Scientific data (differenced)\n");
+	break;
+    case CHUNK_QUALITY_FLAGS:
+	std::printf("Scientific flags\n");
 	break;
     default:
 	std::printf("Unknown chunk type, I will skip it.\n");

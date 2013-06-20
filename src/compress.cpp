@@ -6,12 +6,12 @@
  * modify it under the terms of the GNU General Public License
  * as published by the Free Software Foundation; either version 2
  * of the License, or (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
@@ -23,6 +23,7 @@
 #include <cstdio>
 #include <cstdint>
 #include <cstring>
+#include <memory>
 
 #include <gsl/gsl_math.h>
 
@@ -31,6 +32,7 @@
 #include "run_length_encoding.hpp"
 #include "poly_fit_encoding.hpp"
 #include "compress.hpp"
+#include "datadiff.hpp"
 #include "detpoint.hpp"
 #include "data_structures.hpp"
 
@@ -48,18 +50,19 @@ rad2arcmin(double x)
 
 void
 initialize_file_header(Squeezer_file_header_t & file_header,
-		       const Detector_pointings_t & detpoints,
+		       const Data_container_t & data,
 		       const Compression_parameters_t & params)
 {
     file_header.radiometer = params.radiometer;
     file_header.od = params.od_number;
 
-    file_header.first_obt = detpoints.obt_times.front();
-    file_header.last_obt = detpoints.obt_times.back();
+    file_header.first_obt = data.first_obt();
+    file_header.last_obt = data.last_obt();
 
-    file_header.first_scet_in_ms = detpoints.scet_times.front();
-    file_header.last_scet_in_ms = detpoints.scet_times.back();
-    file_header.number_of_chunks = 5;
+    file_header.first_scet_in_ms = data.first_scet();
+    file_header.last_scet_in_ms = data.last_scet();
+
+    file_header.number_of_chunks = data.number_of_columns();
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -100,7 +103,7 @@ compress_obt(const std::vector<double> & obt,
 		  << " to "
 		  << obt_delta_buffer.buffer.size()
 		  << " bytes (using run-length encoding)\n";
-	
+
 	std::cerr << PROGRAM_NAME
 		  << ":     the overall compression factor for OBT times is "
 		  << (obt.size() * sizeof(obt[0])) * (1.0 / obt_delta_buffer.buffer.size())
@@ -112,8 +115,8 @@ compress_obt(const std::vector<double> & obt,
 //////////////////////////////////////////////////////////////////////
 
 void
-estimate_scet_reconstruction_error(const std::vector<double> & scet, 
-				   const std::vector<double> & obt, 
+estimate_scet_reconstruction_error(const std::vector<double> & scet,
+				   const std::vector<double> & obt,
 				   const std::vector<float> & scet_interp_error,
 				   Error_t & compression_error)
 {
@@ -179,8 +182,8 @@ compress_scet(const std::vector<double> & scet,
     chunk_header.number_of_samples = scet_interp_error.size();
     chunk_header.chunk_type = CHUNK_SCET_ERROR;
 
-    estimate_scet_reconstruction_error(scet, 
-				       obt, 
+    estimate_scet_reconstruction_error(scet,
+				       obt,
 				       scet_interp_error,
 				       chunk_header.compression_error);
 
@@ -261,14 +264,14 @@ compress_angle(const std::vector<double> & angle,
     Byte_buffer_t output_buffer;
     size_t num_of_frames = 0;
     size_t num_of_frames_encoded_directly = 0;
-    poly_fit_encode(angle, 
+    poly_fit_encode(angle,
 		    params.elements_per_frame,
 		    params.number_of_poly_terms,
 		    params.max_abs_error,
 		    output_buffer,
 		    num_of_frames,
 		    num_of_frames_encoded_directly);
-    
+
     Squeezer_chunk_header_t chunk_header;
     chunk_header.number_of_bytes = output_buffer.size();
     chunk_header.number_of_samples = angle.size();
@@ -279,7 +282,7 @@ compress_angle(const std::vector<double> & angle,
 		    output_buffer,
 		    reconstructed_angle);
 
-    estimate_angle_reconstruction_error(angle, 
+    estimate_angle_reconstruction_error(angle,
 					reconstructed_angle,
 					chunk_header.compression_error);
 
@@ -325,40 +328,195 @@ compress_angle(const std::vector<double> & angle,
 //////////////////////////////////////////////////////////////////////
 
 void
-compress_detpoints_to_file(const std::string & input_file_name,
-			   FILE * output_file,
-			   const Compression_parameters_t & params)
+compress_scientific_data(const std::vector<double> & data,
+			 FILE * output_file,
+			 const Compression_parameters_t & params)
 {
-    Detector_pointings_t detpoints;
+    Squeezer_chunk_header_t chunk_header;
+    auto & compr_error = chunk_header.compression_error;
+
+    compr_error.min_abs_error = data.front();
+    compr_error.max_abs_error = 0.0;
+    compr_error.mean_abs_error = 0.0;
+    compr_error.mean_error = 0.0;
+
+    Byte_buffer_t data_buffer;
+    for(auto datum : data) {
+	float single_prec_datum = datum;
+	data_buffer.append_float(single_prec_datum);
+
+	double error = single_prec_datum - datum;
+	double abs_error = std::fabs(error);
+
+	if(compr_error.min_abs_error > abs_error)
+	    compr_error.min_abs_error = abs_error;
+	if(compr_error.max_abs_error < abs_error)
+	    compr_error.max_abs_error = abs_error;
+
+	compr_error.mean_abs_error += abs_error;
+	compr_error.mean_error += error;
+    }
+
+    compr_error.mean_abs_error /= data.size();
+    compr_error.mean_error /= data.size();
+
+    chunk_header.number_of_bytes = data_buffer.buffer.size();
+    chunk_header.number_of_samples = data.size();
+    chunk_header.chunk_type = CHUNK_DIFFERENCED_DATA;
+
+    chunk_header.write_to_file(output_file);
+    data_buffer.write_to_file(output_file);
+
     if(params.verbose_flag) {
-	std::cerr << PROGRAM_NAME << ": reading pointings from " 
+	std::cerr << PROGRAM_NAME
+		  << ": the size of the OBT times shrunk from "
+		  << data.size() * sizeof(data[0])
+		  << " to "
+		  << data_buffer.buffer.size()
+		  << " bytes (using run-length encoding)\n";
+
+	std::cerr << PROGRAM_NAME
+		  << ":     the overall compression factor for OBT times is "
+		  << (data.size() * sizeof(data[0])) *
+	    (1.0 / data_buffer.buffer.size())
+		  << '\n';
+    }
+
+}
+
+//////////////////////////////////////////////////////////////////////
+
+void
+compress_quality_flags(const std::vector<uint32_t> & flags,
+		       FILE * output_file,
+		       const Compression_parameters_t & params)
+{
+    Byte_buffer_t flags_buffer;
+    rle_compression(flags.data(),
+		    flags.size(),
+		    flags_buffer);
+
+    Squeezer_chunk_header_t chunk_header;
+    chunk_header.number_of_bytes = flags_buffer.buffer.size();
+    chunk_header.number_of_samples = flags.size();
+    chunk_header.chunk_type = CHUNK_QUALITY_FLAGS;
+
+    chunk_header.compression_error.min_abs_error = 0.0;
+    chunk_header.compression_error.max_abs_error = 0.0;
+    chunk_header.compression_error.mean_abs_error = 0.0;
+    chunk_header.compression_error.mean_error = 0.0;
+
+    chunk_header.write_to_file(output_file);
+    flags_buffer.write_to_file(output_file);
+
+    if(params.verbose_flag) {
+	std::cerr << PROGRAM_NAME
+		  << ": the size of the quality flags shrunk from "
+		  << flags.size() * sizeof(flags[0])
+		  << " to "
+		  << flags_buffer.buffer.size()
+		  << " bytes (using run-length encoding)\n";
+
+	std::cerr << PROGRAM_NAME
+		  << ":     the overall compression factor for quality flags is "
+		  << (flags.size() * sizeof(flags[0])) *
+	    (1.0 / flags_buffer.buffer.size())
+		  << '\n';
+    }
+
+}
+
+//////////////////////////////////////////////////////////////////////
+
+template <typename Dst, typename Src>
+std::unique_ptr<Dst> unique_dynamic_cast( std::unique_ptr<Src>& ptr )
+{
+    Src *p = ptr.release();
+    std::unique_ptr<Dst> r(dynamic_cast<Dst*>(p));
+    if (!r) {
+        ptr.reset(p);
+    }
+    return r;
+}
+
+//////////////////////////////////////////////////////////////////////
+
+void
+compress_file_to_file(const std::string & input_file_name,
+		      FILE * output_file,
+		      const Compression_parameters_t & params)
+{
+    if(params.verbose_flag) {
+	std::cerr << PROGRAM_NAME << ": reading data from "
 		  << input_file_name << '\n';
     }
 
-    bool detpoints_read = false;
+    bool file_read = false;
+    std::unique_ptr<Data_container_t> file_data;
+
+    switch(params.file_type) {
+    case SQZ_DETECTOR_POINTINGS:
+	file_data.reset(new Detector_pointings_t());
+	break;
+
+    case SQZ_DIFFERENCED_DATA:
+	file_data.reset(new Differenced_data_t());
+	break;
+
+    default:
+	abort();
+    }
 
 #if HAVE_TOODI
     if(input_file_name.compare(0, 6, "TOODI%") == 0) {
-        detpoints.read_from_database(input_file_name);
-        detpoints_read = true;
+        file_data.read_from_database(input_file_name);
+        file_read = true;
     }
 #endif
 
-    if(! detpoints_read) {
-        detpoints.read_from_fits_file(input_file_name);
+    if(! file_read) {
+        file_data->read_from_fits_file(input_file_name);
     }
 
-    Squeezer_file_header_t file_header(SQZ_DETECTOR_POINTINGS);
-    initialize_file_header(file_header, detpoints, params);
-
+    Squeezer_file_header_t file_header(params.file_type);
+    initialize_file_header(file_header, *file_data, params);
     file_header.write_to_file(output_file);
 
-    compress_obt(detpoints.obt_times, output_file, params);
-    compress_scet(detpoints.scet_times, 
-		  detpoints.obt_times,
-		  output_file,
-		  params);
-    compress_angle(detpoints.theta, CHUNK_THETA, output_file, params);
-    compress_angle(detpoints.phi,   CHUNK_PHI, output_file, params);
-    compress_angle(detpoints.psi,   CHUNK_PSI, output_file, params);
+    switch(params.file_type) {
+    case SQZ_DETECTOR_POINTINGS: {
+
+	std::unique_ptr<Detector_pointings_t> detpoints =
+	    unique_dynamic_cast<Detector_pointings_t, Data_container_t>
+	    (file_data);
+
+	compress_obt(detpoints->obt_times, output_file, params);
+	compress_scet(detpoints->scet_times,
+		      detpoints->obt_times,
+		      output_file,
+		      params);
+	compress_angle(detpoints->theta, CHUNK_THETA, output_file, params);
+	compress_angle(detpoints->phi,   CHUNK_PHI, output_file, params);
+	compress_angle(detpoints->psi,   CHUNK_PSI, output_file, params);
+
+    } break;
+
+    case SQZ_DIFFERENCED_DATA: {
+
+	std::unique_ptr<Differenced_data_t> diffdata =
+	    unique_dynamic_cast<Differenced_data_t, Data_container_t>
+	    (file_data);
+
+	compress_obt(diffdata->obt_times, output_file, params);
+	compress_scet(diffdata->scet_times,
+		      diffdata->obt_times,
+		      output_file,
+		      params);
+	compress_scientific_data(diffdata->sky_load, output_file, params);
+	compress_quality_flags(diffdata->quality_flags, output_file, params);
+
+    } break;
+
+    default:
+	abort();
+    }
 }

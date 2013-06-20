@@ -28,6 +28,7 @@
 class Detector_pointings_t;
 
 struct Compression_parameters_t {
+    Squeezer_file_type_t file_type;
     Radiometer_t radiometer;
     uint16_t od_number;
     size_t elements_per_frame;
@@ -36,7 +37,8 @@ struct Compression_parameters_t {
     bool verbose_flag;
 
     Compression_parameters_t()
-	: radiometer(),
+	: file_type(SQZ_NO_DATA),
+	  radiometer(),
 	  od_number(0),
 	  elements_per_frame(25),
 	  number_of_poly_terms(3),
@@ -45,8 +47,8 @@ struct Compression_parameters_t {
 };
 
 void
-compress_detpoints_to_file(const std::string & input_file_name,
-			   FILE * output_file,
-			   const Compression_parameters_t & params);
+compress_file_to_file(const std::string & input_file_name,
+		      FILE * output_file,
+		      const Compression_parameters_t & params);
 
 #endif

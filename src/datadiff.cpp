@@ -22,14 +22,14 @@
 #include <cstring>
 
 #include "common_defs.hpp"
-#include "detpoint.hpp"
+#include "datadiff.hpp"
 #include "toodi_obj.hpp"
 
 //////////////////////////////////////////////////////////////////////
 
 #if HAVE_TOODI
 void
-Detector_pointings_t::read_from_database(const std::string & obj_name)
+Differenced_data_t::read_from_database(const std::string & obj_name)
 {
     SessionHandle session;
     ObjectHandle init_handle = 0;
@@ -37,13 +37,12 @@ Detector_pointings_t::read_from_database(const std::string & obj_name)
     toodiBeginTransaction(session);
 
     {
-        ToodiObject detpoint_obj(session, "toi.LFI_Detpoint_pol", obj_name);
+        ToodiObject detpoint_obj(session, "toi.science.LFI_DataDiff", obj_name);
 
 	detpoint_obj.read_column_of_double("sampleOBT", obt_times);
 	detpoint_obj.read_column_of_double("sampleSCET", scet_times);
-	detpoint_obj.read_column_of_double("theta", theta);
-	detpoint_obj.read_column_of_double("phi", phi);
-	detpoint_obj.read_column_of_double("psi", psi);
+	detpoint_obj.read_column_of_double("sky_load", theta);
+	detpoint_obj.read_column_of_uint32("qualityFlag", quality_flag);
     }
 
     toodiCommitTransaction(session);
@@ -76,8 +75,38 @@ read_double_vector_from_fits(fitsfile * fptr,
 
 //////////////////////////////////////////////////////////////////////
 
+static int
+read_uint32_vector_from_fits(fitsfile * fptr,
+			     LONGLONG num_of_rows,
+			     const std::string & column_name,
+			     std::vector<uint32_t> & vector)
+{
+    int status = 0;
+    int column_number = 0;
+    char * column_name_asciiz = strdup(column_name.c_str());
+    fits_get_colnum(fptr, CASEINSEN, column_name_asciiz, 
+		    &column_number, &status);
+    free(column_name_asciiz);
+
+    std::vector<unsigned long> long_vector;
+    long_vector.resize(num_of_rows);
+    fits_read_col_ulng(fptr, column_number,
+		       1, 1, num_of_rows, 0UL,
+		       long_vector.data(), NULL, &status);
+
+    if(status == 0) {
+	vector.resize(num_of_rows);
+	std::copy(long_vector.begin(), long_vector.end(),
+		  vector.begin());
+    }
+
+    return status;
+}
+
+//////////////////////////////////////////////////////////////////////
+
 void
-Detector_pointings_t::read_from_fits_file(const std::string & file_name)
+Differenced_data_t::read_from_fits_file(const std::string & file_name)
 {
     fitsfile * fptr;
     int status = 0;
@@ -93,9 +122,8 @@ Detector_pointings_t::read_from_fits_file(const std::string & file_name)
 
     if(read_double_vector_from_fits(fptr, num_of_rows, "OBT", obt_times) != 0 ||
        read_double_vector_from_fits(fptr, num_of_rows, "SCET", scet_times) != 0 ||
-       read_double_vector_from_fits(fptr, num_of_rows, "THETA", theta) != 0 ||
-       read_double_vector_from_fits(fptr, num_of_rows, "PHI", phi) != 0 ||
-       read_double_vector_from_fits(fptr, num_of_rows, "PSI", psi) != 0)
+       read_double_vector_from_fits(fptr, num_of_rows, "skyLoad", sky_load) != 0 ||
+       read_uint32_vector_from_fits(fptr, num_of_rows, "flag", quality_flags) != 0)
 	goto close_and_throw_error;
 
     fits_close_file(fptr, &status);
@@ -121,16 +149,16 @@ throw_error:
 //////////////////////////////////////////////////////////////////////
 
 void
-Detector_pointings_t::write_to_fits_file(fitsfile * fptr,
-					 const Radiometer_t & radiometer,
-					 uint16_t od,
-					 int & status)
+Differenced_data_t::write_to_fits_file(fitsfile * fptr,
+				       const Radiometer_t & radiometer,
+				       uint16_t od,
+				       int & status)
 {
     // Since we're going to use a few gotos, it is better to declare
     // all the variables before the first goto
-    char * ttype[] = { "OBT", "SCET", "THETA", "PHI", "PSI" };
-    char * tform[] = { "1D", "1D", "1D", "1D", "1D" };
-    char * tunit[] = { "Clock ticks", "ms", "rad", "rad", "rad" };
+    char * ttype[] = { "OBT", "SCET", "skyLoad", "flags" };
+    char * tform[] = { "1D", "1D", "1D", "1J" };
+    char * tunit[] = { "Clock ticks", "ms", "V", "dimensionless" };
 
     double firstobt = obt_times.front();
     double lastobt = obt_times.back();
@@ -149,11 +177,9 @@ Detector_pointings_t::write_to_fits_file(fitsfile * fptr,
        fits_write_col(fptr, TDOUBLE, 2, 1, 1, 
 		      scet_times.size(), scet_times.data(), &status) != 0 ||
        fits_write_col(fptr, TDOUBLE, 3, 1, 1, 
-		      theta.size(), theta.data(), &status) != 0 ||
-       fits_write_col(fptr, TDOUBLE, 4, 1, 1, 
-		      phi.size(), phi.data(), &status) != 0 ||
-       fits_write_col(fptr, TDOUBLE, 5, 1, 1, 
-		      psi.size(), psi.data(), &status) != 0)
+		      sky_load.size(), sky_load.data(), &status) != 0 ||
+       fits_write_col(fptr, TULONG, 5, 1, 1, 
+		      quality_flags.size(), quality_flags.data(), &status) != 0)
 	return;
 
     if(fits_write_key(fptr, TDOUBLE, "FIRSTOBT", 

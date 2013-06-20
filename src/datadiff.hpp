@@ -18,13 +18,12 @@
  * 02110-1301, USA.
  */
 
-#ifndef DETPOINT_HPP
-#define DETPOINT_HPP
+#ifndef DATADIFF_HPP
+#define DATADIFF_HPP
 
 #include <vector>
+#include <cstdint>
 #include <stdexcept>
-
-#include <fitsio.h>
 
 #include "config.hpp"
 #include "common_defs.hpp"
@@ -34,19 +33,18 @@
 #include <LowLevelIO.h>
 #endif
 
-struct Detector_pointings_t : public Data_container_t {
+struct Differenced_data_t : public Data_container_t {
     std::vector<double> obt_times;
     std::vector<double> scet_times;
-    std::vector<double> theta;
-    std::vector<double> phi;
-    std::vector<double> psi;
+    std::vector<double> sky_load;
+    std::vector<uint32_t> quality_flags;
 
     virtual double first_obt() const  { return obt_times.front(); }
     virtual double last_obt() const   { return obt_times.back(); }
     virtual double first_scet() const { return scet_times.front(); }
     virtual double last_scet() const  { return scet_times.back(); }
 
-    virtual size_t number_of_columns() const { return 5; }
+    virtual size_t number_of_columns() const { return 4; }
 
 #if HAVE_TOODI
     virtual void read_from_database(const std::string & obj_name);

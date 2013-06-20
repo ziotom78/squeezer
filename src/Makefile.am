@@ -25,6 +25,7 @@ squeezer_SOURCES = \
 	common_defs.cpp \
 	compress.cpp \
 	data_structures.cpp \
+	datadiff.cpp \
 	decompress.cpp \
 	detpoint.cpp \
 	file_io.cpp \
