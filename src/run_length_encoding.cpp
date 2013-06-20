@@ -35,9 +35,9 @@ rle_compression(const uint32_t * input_stream,
 	uint32_t first_dword_in_the_run = *ptr_to_cur_dword++;
 
 	uint32_t count = 1;
-	while(*ptr_to_cur_dword == first_dword_in_the_run &&
-	      count < UINT32_MAX &&
-	      (size_t) (ptr_to_cur_dword - input_stream + 1) < input_size) {
+	while(count < UINT32_MAX &&
+	      (size_t) (ptr_to_cur_dword - input_stream + 1) < input_size &&
+	      *ptr_to_cur_dword == first_dword_in_the_run) {
 	    ptr_to_cur_dword++;
 	    count++;
 	}
