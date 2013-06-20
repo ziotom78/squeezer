@@ -33,13 +33,16 @@
 #endif
 
 struct Data_container_t {
+    std::vector<double> obt_times;
+    std::vector<double> scet_times;
+
     Data_container_t() {}
     virtual ~Data_container_t() {}
 
-    virtual double first_obt() const = 0;
-    virtual double last_obt() const = 0;
-    virtual double first_scet() const = 0;
-    virtual double last_scet() const = 0;
+    virtual double first_obt() const  { return obt_times.front(); }
+    virtual double last_obt() const   { return obt_times.back(); }
+    virtual double first_scet() const { return scet_times.front(); }
+    virtual double last_scet() const  { return scet_times.back(); }
 
     virtual size_t number_of_columns() const = 0;
 

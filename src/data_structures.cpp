@@ -272,7 +272,7 @@ Squeezer_chunk_header_t::is_valid() const
        chunk_mark[3] != 0 ||
        number_of_bytes == 0 ||
        number_of_samples == 0 ||
-       chunk_type < 10 || chunk_type > 14)
+       chunk_type < CHUNK_DELTA_OBT || chunk_type > CHUNK_QUALITY_FLAGS)
 	return false;
 
     return true;

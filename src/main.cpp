@@ -294,9 +294,9 @@ run_decompression_task(const std::vector<std::string> & list_of_arguments)
 	input_file = std::fopen(input_file_name.c_str(), "rb");
     }
 
-    decompress_detpoints_from_file(input_file,
-				   output_file_name,
-				   params);
+    decompress_file_from_file(input_file,
+			      output_file_name,
+			      params);
 
     if(! read_from_stdin) {
 	std::fclose(input_file);

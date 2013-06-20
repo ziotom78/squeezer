@@ -22,6 +22,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
+#include <memory>
 
 #include <gsl/gsl_math.h>
 
@@ -30,6 +31,7 @@
 #include "byte_buffer.hpp"
 #include "run_length_encoding.hpp"
 #include "poly_fit_encoding.hpp"
+#include "datadiff.hpp"
 #include "detpoint.hpp"
 #include "decompress.hpp"
 
@@ -102,12 +104,34 @@ decompress_angles(Byte_buffer_t & buffer,
 //////////////////////////////////////////////////////////////////////
 
 void
+decompress_scientific_data(Byte_buffer_t & buffer,
+			   size_t num_of_samples,
+			   std::vector<double> & dest)
+{
+    dest.resize(num_of_samples);
+    for(size_t idx = 0; idx < num_of_samples; ++idx)
+	dest[idx] = buffer.read_float();
+}
+
+//////////////////////////////////////////////////////////////////////
+
+void
+decompress_quality_flags(Byte_buffer_t & buffer,
+			 size_t num_of_samples,
+			 std::vector<uint32_t> & dest)
+{
+    rle_decompression(buffer, num_of_samples, dest);
+}
+
+//////////////////////////////////////////////////////////////////////
+
+void
 decompress_chunk(size_t chunk_idx,
 		 const Squeezer_file_header_t & file_header,
 		 const Squeezer_chunk_header_t & chunk_header,
 		 FILE * input_file,
 		 const Decompression_parameters_t & params,
-		 Detector_pointings_t & detpoints)
+		 Data_container_t * data_container)
 {
     if(! chunk_header.is_valid()) {
 
@@ -156,10 +180,10 @@ decompress_chunk(size_t chunk_idx,
 	decompress_obt_times(chunk_data, 
 			     file_header.first_obt,
 			     chunk_header.number_of_samples,
-			     detpoints.obt_times);
+			     data_container->obt_times);
 	break;
     case CHUNK_SCET_ERROR:
-	if(detpoints.obt_times.empty()) {
+	if(data_container->obt_times.empty()) {
 	    std::cerr << PROGRAM_NAME
 		      << ": malformed chunk #"
 		      << chunk_idx + 1
@@ -171,27 +195,57 @@ decompress_chunk(size_t chunk_idx,
 
 	decompress_scet_times(chunk_data, 
 			      file_header,
-			      detpoints.obt_times, 
-			      detpoints.scet_times);
+			      data_container->obt_times, 
+			      data_container->scet_times);
 	break;
     case CHUNK_THETA:
+    {
+	Detector_pointings_t * detpoints =
+	    dynamic_cast<Detector_pointings_t *>(data_container);
 	decompress_angles(chunk_data, 
 			  chunk_header.number_of_samples,
-			  detpoints.theta,
+			  detpoints->theta,
 			  params);
 	break;
+    }
     case CHUNK_PHI:
+    {
+	Detector_pointings_t * detpoints =
+	    dynamic_cast<Detector_pointings_t *>(data_container);
 	decompress_angles(chunk_data, 
 			  chunk_header.number_of_samples,
-			  detpoints.phi,
+			  detpoints->phi,
 			  params);
 	break;
+    }
     case CHUNK_PSI:
+    {
+	Detector_pointings_t * detpoints =
+	    dynamic_cast<Detector_pointings_t *>(data_container);
 	decompress_angles(chunk_data, 
 			  chunk_header.number_of_samples,
-			  detpoints.psi,
+			  detpoints->psi,
 			  params);
 	break;
+    }
+    case CHUNK_DIFFERENCED_DATA:
+    {
+	Differenced_data_t * datadiff =
+	    dynamic_cast<Differenced_data_t *>(data_container);
+	decompress_scientific_data(chunk_data, 
+				   chunk_header.number_of_samples,
+				   datadiff->sky_load);
+	break;
+    }
+    case CHUNK_QUALITY_FLAGS:
+    {
+	Differenced_data_t * datadiff =
+	    dynamic_cast<Differenced_data_t *>(data_container);
+	decompress_quality_flags(chunk_data, 
+				 chunk_header.number_of_samples,
+				 datadiff->quality_flags);
+	break;
+    }
     default:
 	abort();
     }
@@ -200,17 +254,16 @@ decompress_chunk(size_t chunk_idx,
 //////////////////////////////////////////////////////////////////////
 
 void
-decompress_detpoints_from_file(FILE * input_file,
-			       const std::string & output_file_name,
-			       const Decompression_parameters_t & params)
+decompress_file_from_file(FILE * input_file,
+			  const std::string & output_file_name,
+			  const Decompression_parameters_t & params)
 {
-    Detector_pointings_t detpoints;
     if(params.verbose_flag) {
-	std::cerr << PROGRAM_NAME << ": writing pointings to "
+	std::cerr << PROGRAM_NAME << ": writing data to "
 		  << output_file_name << '\n';
     }
 
-    Squeezer_file_header_t file_header(SQZ_DETECTOR_POINTINGS);
+    Squeezer_file_header_t file_header(SQZ_NO_DATA);
     file_header.read_from_file(input_file);
     if(! file_header.is_valid()) {
 	std::cerr << PROGRAM_NAME
@@ -235,8 +288,33 @@ decompress_detpoints_from_file(FILE * input_file,
 	return;
     }
 
+    Squeezer_file_type_t file_type = file_header.get_type();
+    std::unique_ptr<Data_container_t> file_data;
+    switch(file_type) {
+    case SQZ_DETECTOR_POINTINGS:
+	file_data.reset(new Detector_pointings_t());
+	break;
+
+    case SQZ_DIFFERENCED_DATA:
+	file_data.reset(new Differenced_data_t());
+	break;
+
+    default:
+	abort();
+    }
+
     if(params.verbose_flag) {
-	std::cerr << PROGRAM_NAME << ": the file contains pointings for radiometer "
+	std::string data_type;
+	switch(file_type) {
+	case SQZ_DETECTOR_POINTINGS: data_type = "detector pointings"; break;
+	case SQZ_DIFFERENCED_DATA: data_type = "differenced data"; break;
+	default:
+	    data_type = "unknown data"; break;
+	}
+
+	std::cerr << PROGRAM_NAME << ": the file contains "
+		  << data_type
+		  << " for radiometer "
 		  << file_header.radiometer.to_str()
 		  << ", OD "
 		  << file_header.od
@@ -253,7 +331,7 @@ decompress_detpoints_from_file(FILE * input_file,
 			 chunk_header, 
 			 input_file, 
 			 params, 
-			 detpoints);
+			 file_data.get());
 
     }
 
@@ -273,10 +351,10 @@ decompress_detpoints_from_file(FILE * input_file,
 
     if(status == 0) {
 
-	detpoints.write_to_fits_file(fptr,
-				     file_header.radiometer,
-				     file_header.od,
-				     status);
+	file_data->write_to_fits_file(fptr,
+				      file_header.radiometer,
+				      file_header.od,
+				      status);
 	fits_close_file(fptr, &status);
     
     }

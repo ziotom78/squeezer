@@ -32,8 +32,8 @@ struct Decompression_parameters_t {
     }
 };
 
-void decompress_detpoints_from_file(FILE * input_file,
-				    const std::string & output_file_name,
-				    const Decompression_parameters_t & params);
+void decompress_file_from_file(FILE * input_file,
+			       const std::string & output_file_name,
+			       const Decompression_parameters_t & params);
 
 #endif

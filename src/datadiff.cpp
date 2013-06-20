@@ -168,9 +168,14 @@ Differenced_data_t::write_to_fits_file(fitsfile * fptr,
     char extname[30];
 
     std::strncpy(extname, radiometer.to_str().c_str(), sizeof(extname));
-    if(fits_create_tbl(fptr, BINARY_TBL, obt_times.size(), 5, 
+    if(fits_create_tbl(fptr, BINARY_TBL, obt_times.size(), 4, 
 		       ttype, tform, tunit, extname, &status) != 0)
 	return;
+
+    std::vector<unsigned long> ulong_flags;
+    ulong_flags.resize(quality_flags.size());
+    std::copy(quality_flags.begin(), quality_flags.end(),
+	      ulong_flags.begin());
 
     if(fits_write_col(fptr, TDOUBLE, 1, 1, 1, 
 		      obt_times.size(), obt_times.data(), &status) != 0 ||
@@ -178,8 +183,8 @@ Differenced_data_t::write_to_fits_file(fitsfile * fptr,
 		      scet_times.size(), scet_times.data(), &status) != 0 ||
        fits_write_col(fptr, TDOUBLE, 3, 1, 1, 
 		      sky_load.size(), sky_load.data(), &status) != 0 ||
-       fits_write_col(fptr, TULONG, 5, 1, 1, 
-		      quality_flags.size(), quality_flags.data(), &status) != 0)
+       fits_write_col(fptr, TULONG, 4, 1, 1, 
+		      ulong_flags.size(), ulong_flags.data(), &status) != 0)
 	return;
 
     if(fits_write_key(fptr, TDOUBLE, "FIRSTOBT", 

@@ -34,15 +34,8 @@
 #endif
 
 struct Differenced_data_t : public Data_container_t {
-    std::vector<double> obt_times;
-    std::vector<double> scet_times;
     std::vector<double> sky_load;
     std::vector<uint32_t> quality_flags;
-
-    virtual double first_obt() const  { return obt_times.front(); }
-    virtual double last_obt() const   { return obt_times.back(); }
-    virtual double first_scet() const { return scet_times.front(); }
-    virtual double last_scet() const  { return scet_times.back(); }
 
     virtual size_t number_of_columns() const { return 4; }
 

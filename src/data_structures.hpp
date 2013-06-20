@@ -23,6 +23,7 @@
 
 #include <cstdint>
 #include <cstdio>
+#include <cstring>
 #include "common_defs.hpp"
 
 extern const uint16_t program_version;
@@ -55,6 +56,15 @@ struct Squeezer_file_header_t {
     uint32_t number_of_chunks;
 
     Squeezer_file_header_t(Squeezer_file_type_t type);
+
+    Squeezer_file_type_t get_type() const {
+	if(std::strcmp((char *) file_type_mark, "PDP") == 0)
+	    return SQZ_DETECTOR_POINTINGS;
+	else if(std::strcmp((char *) file_type_mark, "PDD") == 0)
+	    return SQZ_DIFFERENCED_DATA;
+	else
+	    return SQZ_NO_DATA;
+    }
 
     void read_from_file(FILE * in);
     void write_to_file(FILE * out) const;
