@@ -24,6 +24,8 @@
 #include <vector>
 #include <stdexcept>
 
+#include <fitsio.h>
+
 #include "config.hpp"
 #include "common_defs.hpp"
 
@@ -43,8 +45,10 @@ struct Detector_pointings_t {
 #endif
 
     void read_from_fits_file(const std::string & file_name);
-    void write_to_fits_file(const std::string & file_name,
-			    const Radiometer_t & radiometer);
+    void write_to_fits_file(fitsfile * fptr,
+			    const Radiometer_t & radiometer,
+			    uint16_t od,
+			    int & status);
 };
 
 #endif

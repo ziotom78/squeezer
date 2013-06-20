@@ -157,12 +157,11 @@ throw_error:
 //////////////////////////////////////////////////////////////////////
 
 void
-Detector_pointings_t::write_to_fits_file(const std::string & file_name,
-					 const Radiometer_t & radiometer)
+Detector_pointings_t::write_to_fits_file(fitsfile * fptr,
+					 const Radiometer_t & radiometer,
+					 uint16_t od,
+					 int & status)
 {
-    fitsfile * fptr;
-    int status = 0;
-
     // Since we're going to use a few gotos, it is better to declare
     // all the variables before the first goto
     char * ttype[] = { "OBT", "SCET", "THETA", "PHI", "PSI" };
@@ -176,14 +175,10 @@ Detector_pointings_t::write_to_fits_file(const std::string & file_name,
 
     char extname[30];
 
-    fits_create_file(&fptr, const_cast<char *>(file_name.c_str()), &status);
-    if(status != 0)
-	goto throw_error;
-
     std::strncpy(extname, radiometer.to_str().c_str(), sizeof(extname));
     if(fits_create_tbl(fptr, BINARY_TBL, obt_times.size(), 5, 
 		       ttype, tform, tunit, extname, &status) != 0)
-	goto close_and_throw_error;
+	return;
 
     if(fits_write_col(fptr, TDOUBLE, 1, 1, 1, 
 		      obt_times.size(), obt_times.data(), &status) != 0 ||
@@ -195,7 +190,7 @@ Detector_pointings_t::write_to_fits_file(const std::string & file_name,
 		      phi.size(), phi.data(), &status) != 0 ||
        fits_write_col(fptr, TDOUBLE, 5, 1, 1, 
 		      psi.size(), psi.data(), &status) != 0)
-	goto close_and_throw_error;
+	return;
 
     if(fits_write_key(fptr, TDOUBLE, "FIRSTOBT", 
 		      (void *) &firstobt, "First OBT time", &status) != 0 ||
@@ -205,29 +200,12 @@ Detector_pointings_t::write_to_fits_file(const std::string & file_name,
 		      (void *) &firstsct, "First SCET time [ms]", &status) != 0 ||
        fits_write_key(fptr, TDOUBLE, "LASTSCT", 
 		      (void *) &lastsct, "Last SCET time [ms]", &status) != 0 ||
+       fits_write_key(fptr, TSHORT, "OD",
+		      (void *) &od, "Operational day", &status) != 0 ||
        fits_write_key(fptr, TBYTE, "HORN",
 		      (void *) &radiometer.horn, "Horn number (18..28)", &status) != 0 ||
        fits_write_key(fptr, TBYTE, "RAD",
 		      (void *) &radiometer.arm, "Radiometer number (0, 1)", &status) != 0 ||
        fits_write_date(fptr, &status) != 0)
-	goto close_and_throw_error;
-
-    fits_close_file(fptr, &status);
-    if(status != 0)
-	goto throw_error;
-
-    return;
-
-close_and_throw_error:
-    status = 0; // Reset the error status
-    fits_close_file(fptr, &status);
-    
-throw_error:
-    char error_msg[80];
-    std::string error_string;
-    while(fits_read_errmsg(error_msg) != 0) {
-	error_string += error_msg;
-	error_string += '\n';
-    }
-    throw std::runtime_error(error_string);
+	return;
 }

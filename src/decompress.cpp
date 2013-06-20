@@ -102,6 +102,104 @@ decompress_angles(Byte_buffer_t & buffer,
 //////////////////////////////////////////////////////////////////////
 
 void
+decompress_chunk(size_t chunk_idx,
+		 const Detpoint_file_header_t & file_header,
+		 const Detpoint_chunk_header_t & chunk_header,
+		 FILE * input_file,
+		 const Decompression_parameters_t & params,
+		 Detector_pointings_t & detpoints)
+{
+    if(! chunk_header.is_valid()) {
+
+	std::cerr << PROGRAM_NAME
+		  << ": the input file seems to have been corrupted.\n";
+	return;
+
+    } else if(params.verbose_flag) {
+
+	std::cerr << PROGRAM_NAME
+		  << ": reading data chunk #"
+		  << chunk_idx + 1
+		  << " (";
+
+	switch(chunk_header.chunk_type) {
+	case CHUNK_DELTA_OBT: std::cerr << "OBT times"; break;
+	case CHUNK_SCET_ERROR: std::cerr << "SCET times"; break;
+	case CHUNK_THETA: std::cerr << "theta angle"; break;
+	case CHUNK_PHI: std::cerr << "phi angle"; break;
+	case CHUNK_PSI: std::cerr << "psi angle"; break;
+	default: std::cerr << "unknown chunk";
+	}
+
+	std::cerr << ")\n";
+
+    }
+
+    Byte_buffer_t chunk_data;
+    chunk_data.buffer.resize(chunk_header.number_of_bytes);
+    if(fread(chunk_data.buffer.data(), 
+	     1, 
+	     chunk_header.number_of_bytes, 
+	     input_file) < chunk_header.number_of_bytes) {
+
+	std::cerr << PROGRAM_NAME
+		  << ": unable to read the contents of chunk #"
+		  << chunk_idx + 1
+		  << ", perhaps the file is corrupted or disappeared "
+		  << "during reading\n";
+	return;
+
+    }
+
+    switch(chunk_header.chunk_type) {
+    case CHUNK_DELTA_OBT:
+	decompress_obt_times(chunk_data, 
+			     file_header.first_obt,
+			     chunk_header.number_of_samples,
+			     detpoints.obt_times);
+	break;
+    case CHUNK_SCET_ERROR:
+	if(detpoints.obt_times.empty()) {
+	    std::cerr << PROGRAM_NAME
+		      << ": malformed chunk #"
+		      << chunk_idx + 1
+		      << ", SCET times have been found here but no "
+		      << "OBT times have been read yet\n";
+
+	    return;
+	}
+
+	decompress_scet_times(chunk_data, 
+			      file_header,
+			      detpoints.obt_times, 
+			      detpoints.scet_times);
+	break;
+    case CHUNK_THETA:
+	decompress_angles(chunk_data, 
+			  chunk_header.number_of_samples,
+			  detpoints.theta,
+			  params);
+	break;
+    case CHUNK_PHI:
+	decompress_angles(chunk_data, 
+			  chunk_header.number_of_samples,
+			  detpoints.phi,
+			  params);
+	break;
+    case CHUNK_PSI:
+	decompress_angles(chunk_data, 
+			  chunk_header.number_of_samples,
+			  detpoints.psi,
+			  params);
+	break;
+    default:
+	abort();
+    }
+}
+
+//////////////////////////////////////////////////////////////////////
+
+void
 decompress_detpoints_from_file(FILE * input_file,
 			       const std::string & output_file_name,
 			       const Decompression_parameters_t & params)
@@ -146,87 +244,17 @@ decompress_detpoints_from_file(FILE * input_file,
     }
 
     for(size_t idx = 0; idx < file_header.number_of_chunks; ++idx) {
+
 	Detpoint_chunk_header_t chunk_header;
 	chunk_header.read_from_file(input_file);
 
-	if(! chunk_header.is_valid()) {
-	    std::cerr << PROGRAM_NAME
-		      << ": the input file seems to have been corrupted.\n";
-	    return;
-	} else if(params.verbose_flag) {
-	    std::cerr << PROGRAM_NAME
-		      << ": reading data chunk #"
-		      << idx + 1
-		      << " (";
+	decompress_chunk(idx, 
+			 file_header,
+			 chunk_header, 
+			 input_file, 
+			 params, 
+			 detpoints);
 
-	    switch(chunk_header.chunk_type) {
-	    case CHUNK_DELTA_OBT: std::cerr << "OBT times"; break;
-	    case CHUNK_SCET_ERROR: std::cerr << "SCET times"; break;
-	    case CHUNK_THETA: std::cerr << "theta angle"; break;
-	    case CHUNK_PHI: std::cerr << "phi angle"; break;
-	    case CHUNK_PSI: std::cerr << "psi angle"; break;
-	    default: std::cerr << "unknown chunk";
-	    }
-
-	    std::cerr << ")\n";
-	}
-
-	Byte_buffer_t chunk_data;
-	chunk_data.buffer.resize(chunk_header.number_of_bytes);
-	if(fread(chunk_data.buffer.data(), 1, 
-		 chunk_header.number_of_bytes, input_file) < chunk_header.number_of_bytes)
-	{
-	    std::cerr << PROGRAM_NAME
-		      << ": unable to read the contents of chunk #"
-		      << idx + 1
-		      << ", perhaps the file is corrupted or disappeared during reading\n";
-	    return;
-	}
-
-	switch(chunk_header.chunk_type) {
-	case CHUNK_DELTA_OBT:
-	    decompress_obt_times(chunk_data, 
-				 file_header.first_obt,
-				 chunk_header.number_of_samples,
-				 detpoints.obt_times);
-	    break;
-	case CHUNK_SCET_ERROR:
-	    if(detpoints.obt_times.empty()) {
-		std::cerr << PROGRAM_NAME
-			  << ": malformed chunk #"
-			  << idx + 1
-			  << ", SCET times have been found here but no "
-			  << "OBT times have been read yet\n";
-
-		return;
-	    }
-
-	    decompress_scet_times(chunk_data, 
-				  file_header,
-				  detpoints.obt_times, 
-				  detpoints.scet_times);
-	    break;
-	case CHUNK_THETA:
-	    decompress_angles(chunk_data, 
-			      chunk_header.number_of_samples,
-			      detpoints.theta,
-			      params);
-	    break;
-	case CHUNK_PHI:
-	    decompress_angles(chunk_data, 
-			      chunk_header.number_of_samples,
-			      detpoints.phi,
-			      params);
-	    break;
-	case CHUNK_PSI:
-	    decompress_angles(chunk_data, 
-			      chunk_header.number_of_samples,
-			      detpoints.psi,
-			      params);
-	    break;
-	default:
-	    abort();
-	}
     }
 
     if(params.verbose_flag) {
@@ -236,6 +264,32 @@ decompress_detpoints_from_file(FILE * input_file,
 		  << '\n';
     }
 
-    detpoints.write_to_fits_file(output_file_name,
-				 file_header.radiometer);
+    fitsfile * fptr;
+    int status = 0;
+
+    fits_create_file(&fptr,
+		     const_cast<char *>(output_file_name.c_str()),
+		     &status);
+
+    if(status == 0) {
+
+	detpoints.write_to_fits_file(fptr,
+				     file_header.radiometer,
+				     file_header.od,
+				     status);
+	fits_close_file(fptr, &status);
+    
+    }
+
+    if(status != 0) {
+
+	char error_msg[80];
+	std::string error_string;
+	while(fits_read_errmsg(error_msg) != 0) {
+	    error_string += error_msg;
+	    error_string += '\n';
+	}
+	throw std::runtime_error(error_string);
+
+    }
 }
