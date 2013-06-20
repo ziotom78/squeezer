@@ -469,7 +469,7 @@ compress_file_to_file(const std::string & input_file_name,
 
 #if HAVE_TOODI
     if(input_file_name.compare(0, 6, "TOODI%") == 0) {
-        file_data.read_from_database(input_file_name);
+        file_data->read_from_database(input_file_name);
         file_read = true;
     }
 #endif

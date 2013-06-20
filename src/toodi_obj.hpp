@@ -71,7 +71,7 @@ public:
 	toodiGetSizeOfColumn(object_handle, column_idx, &num_of_rows);
 
 	vector.resize(num_of_rows);
-	toodiGetInt32Values(object_handle, column_idx, 0, num_of_rows, vector.data());
+	toodiGetUint32Values(object_handle, column_idx, 0, num_of_rows, vector.data());
     }
 };
 
