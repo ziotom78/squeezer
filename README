@@ -1,0 +1,20 @@
+This is the preliminary version of a program that compresses LFI
+detector pointings using a variety of (mostly) lossy algorithms. The
+input to the program is a set of detector pointing files (these can be
+either FITS files or objects in the Planck/LFI DMC database), and the
+output is a set of binary files containing the compressed detector
+pointings.
+
+The amount of compression depends on a variety of factors, and it can
+be tuned according to the user's wishes.
+
+The requirements for compiling Squeezer are:
+
+   * CFITSIO (required)
+   * GNU GSL (required)
+   * CppUnit (optional, it allows the user to run "make check")
+   * TOODI (optional, it allows the program to get the pointings from
+     the Planck/LFI DPC database)
+
+Refer to the INSTALL file to learn how to compile and install the
+program.
