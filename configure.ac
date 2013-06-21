@@ -5,12 +5,12 @@
 # modify it under the terms of the GNU General Public License
 # as published by the Free Software Foundation; either version 2
 # of the License, or (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
@@ -33,7 +33,8 @@ AX_CXX_COMPILE_STDCXX_11(,mandatory)
 ######################################################################
 # Check for the presence of CFITSIO
 
-AC_CHECK_LIB(cfitsio, ffopen,, AC_MSG_ERROR(Cannot find the CFITSIO library.))
+AC_CHECK_LIB(cfitsio, ffopen,, AC_MSG_ERROR(Cannot find the CFITSIO library.), [-lz -lpthread])
+LIBS="$LIBS -lz -lpthread"
 
 ######################################################################
 # Check for the presence of GSL
@@ -42,7 +43,7 @@ AC_PATH_PROG(GSL_CONFIG, gsl-config, no)
 
 if test "x$GSL_CONFIG" = "xno"; then
    AC_MSG_NOTICE(gsl-config not found in path.)
-else			      
+else
    GSL_CFLAGS=`$GSL_CONFIG --cflags`
    GSL_LDFLAGS=`$GSL_CONFIG --libs`
 
@@ -54,7 +55,7 @@ AC_CHECK_LIB([m],[cos])
 AC_CHECK_LIB([gslcblas],[cblas_dgemm],,
 	[AC_MSG_ERROR(Cannot find the GSLCBLAS library.)],
 	[$GSL_LDFLAGS])
-AC_CHECK_LIB([gsl],[gsl_blas_dgemm],, 
+AC_CHECK_LIB([gsl],[gsl_blas_dgemm],,
         [AC_MSG_ERROR(Cannot find the GSL library)],
 	[$GSL_LDFLAGS])
 
@@ -66,6 +67,24 @@ AM_PATH_CPPUNIT(1.9.6, [cppunit=yes
 		       [cppunit=no])
 
 AM_CONDITIONAL([CPPUNIT_PRESENT], [test x$cppunit = xyes])
+
+######################################################################
+# Check for the presence of HPixLib
+
+AC_CHECK_LIB([hpix], [hpix_valid_nside],
+	     [libhpix=yes AC_DEFINE(HAVE_HPIX, 1, [Define to 1 if you have HPixLib available])],
+             [libhpix=no])
+
+if test x$libhpix = xno; then
+   PKG_CHECK_MODULES([HPIXLIB], [libhpix],
+   	        [libhpix=yes AC_DEFINE(HAVE_HPIX, 1, [Define to 1 if you have HPixLib available])],
+                [libhpix=no])
+fi
+
+AM_CONDITIONAL(HPIXLIB_PRESENT, [test x$libhpix == xyes])
+AC_SUBST(HPIXLIB_CFLAGS)
+AC_SUBST(HPIXLIB_LIBS)
+AC_SUBST(HPIXLIB_LDFLAGS)
 
 ######################################################################
 # Check for the presence of the TOODI library
@@ -113,6 +132,7 @@ AC_OUTPUT
 echo ""
 echo "   Squeezer will be compiled with the following options:"
 echo ""
+echo "   HPixLib: $libhpix"
 echo "   CppUnit: $cppunit"
 echo "   TOODI: $toodi"
 echo ""

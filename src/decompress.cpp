@@ -253,23 +253,17 @@ decompress_chunk(size_t chunk_idx,
 
 //////////////////////////////////////////////////////////////////////
 
-void
-decompress_file_from_file(FILE * input_file,
-			  const std::string & output_file_name,
-			  const Decompression_parameters_t & params)
+Data_container_t *
+decompress_from_file(FILE * input_file,
+		     const Decompression_parameters_t & params)
 {
-    if(params.verbose_flag) {
-	std::cerr << PROGRAM_NAME << ": writing data to "
-		  << output_file_name << '\n';
-    }
-
     Squeezer_file_header_t file_header(SQZ_NO_DATA);
     file_header.read_from_file(input_file);
     if(! file_header.is_valid()) {
 	std::cerr << PROGRAM_NAME
 		  << ": the input file does not seem to have been "
 		  << "created by \"squeezer\". It might have been damaged.\n";
-	return;
+	return nullptr;
     }
 
     if(! file_header.is_compatible_version()) {
@@ -285,23 +279,26 @@ decompress_file_from_file(FILE * input_file,
 		  << MINOR_PROGRAM_VERSION
 		  << "). I will cowardly stop here.";
 
-	return;
+	return nullptr;
     }
 
     Squeezer_file_type_t file_type = file_header.get_type();
-    std::unique_ptr<Data_container_t> file_data;
+    Data_container_t * file_data;
     switch(file_type) {
     case SQZ_DETECTOR_POINTINGS:
-	file_data.reset(new Detector_pointings_t());
+	file_data = new Detector_pointings_t();
 	break;
 
     case SQZ_DIFFERENCED_DATA:
-	file_data.reset(new Differenced_data_t());
+	file_data = new Differenced_data_t();
 	break;
 
     default:
 	abort();
     }
+
+    file_data->radiometer = file_header.radiometer;
+    file_data->od = file_header.od;
 
     if(params.verbose_flag) {
 	std::string data_type;
@@ -331,9 +328,21 @@ decompress_file_from_file(FILE * input_file,
 			 chunk_header, 
 			 input_file, 
 			 params, 
-			 file_data.get());
+			 file_data);
 
     }
+
+    return file_data;
+}
+
+//////////////////////////////////////////////////////////////////////
+
+void
+decompress_file_from_file(FILE * input_file,
+			  const std::string & output_file_name,
+			  const Decompression_parameters_t & params)
+{
+    std::unique_ptr<Data_container_t> file_data(decompress_from_file(input_file, params));
 
     if(params.verbose_flag) {
 	std::cerr << PROGRAM_NAME
@@ -351,10 +360,7 @@ decompress_file_from_file(FILE * input_file,
 
     if(status == 0) {
 
-	file_data->write_to_fits_file(fptr,
-				      file_header.radiometer,
-				      file_header.od,
-				      status);
+	file_data->write_to_fits_file(fptr, status);
 	fits_close_file(fptr, &status);
     
     }

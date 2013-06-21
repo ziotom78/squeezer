@@ -24,6 +24,8 @@
 #include <cstdio>
 #include <string>
 
+struct Data_container_t;
+
 struct Decompression_parameters_t {
     bool verbose_flag;
 
@@ -31,6 +33,9 @@ struct Decompression_parameters_t {
 	verbose_flag = false;
     }
 };
+
+Data_container_t * decompress_from_file(FILE * input_file,
+					const Decompression_parameters_t & params);
 
 void decompress_file_from_file(FILE * input_file,
 			       const std::string & output_file_name,

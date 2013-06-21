@@ -121,10 +121,7 @@ throw_error:
 //////////////////////////////////////////////////////////////////////
 
 void
-Detector_pointings_t::write_to_fits_file(fitsfile * fptr,
-					 const Radiometer_t & radiometer,
-					 uint16_t od,
-					 int & status)
+Detector_pointings_t::write_to_fits_file(fitsfile * fptr, int & status)
 {
     // Since we're going to use a few gotos, it is better to declare
     // all the variables before the first goto

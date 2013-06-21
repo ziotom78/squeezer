@@ -44,10 +44,7 @@ struct Differenced_data_t : public Data_container_t {
 #endif
 
     virtual void read_from_fits_file(const std::string & file_name);
-    virtual void write_to_fits_file(fitsfile * fptr,
-				    const Radiometer_t & radiometer,
-				    uint16_t od,
-				    int & status);
+    virtual void write_to_fits_file(fitsfile * fptr, int & status);
 };
 
 #endif

@@ -16,10 +16,42 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 # 02110-1301, USA.
 
-AM_CPPFLAGS = -Wall --pedantic -g $(GSL_CFLAGS)
-LDFLAGS = $(GSL_LDFLAGS)
+AM_CPPFLAGS = --pedantic
+PROGRAMS_TO_BUILD = squeezer
 
-bin_PROGRAMS = squeezer
+######################################################################
+
+if HPIXLIB_PRESENT
+
+PROGRAMS_TO_BUILD += hit_map
+
+hit_map_SOURCES = \
+	byte_buffer.cpp \
+	common_defs.cpp \
+	data_structures.cpp \
+	decompress.cpp \
+	datadiff.cpp \
+	detpoint.cpp \
+	file_io.cpp \
+	poly_fit_encoding.cpp \
+	run_length_encoding.cpp \
+	hit_map.cpp
+
+hit_map_CPPFLAGS = $(HPIXLIB_CFLAGS)
+hit_map_LDADD = $(HPIXLIB_LIBS)
+
+if TOODI_PRESENT
+
+hit_map_CPPFLAGS += $(TOODI_CFLAGS)
+hit_map_LDADD += $(TOODI_LIBS)
+
+endif
+
+endif
+
+######################################################################
+
+bin_PROGRAMS = $(PROGRAMS_TO_BUILD)
 
 squeezer_SOURCES = \
 	byte_buffer.cpp \
@@ -36,10 +68,15 @@ squeezer_SOURCES = \
 	run_length_encoding.cpp \
 	statistics.cpp
 
+squeezer_CPPFLAGS = $(GSL_CFLAGS)
+squeezer_LIBS = $(GSL_LIBS)
+squeezer_LDFLAGS = $(GSL_LDFLAGS)
+
 if TOODI_PRESENT
 
-AM_CPPFLAGS += $(TOODI_CFLAGS)
-LIBS += $(TOODI_LIBS)
+squeezer_CPPFLAGS += $(TOODI_CFLAGS)
+squeezer_LIBS += $(TOODI_LIBS)
+squeezer_LDFLAGS += $(TOODI_LDFLAGS)
 
 endif
 
@@ -61,7 +98,8 @@ check_program_SOURCES = \
 	run_length_encoding.cpp \
 	statistics.cpp
 
-AM_CPPFLAGS += $(CPPUNIT_CFLAGS)
-LIBS += $(CPPUNIT_LIBS)
+check_program_CPPFLAGS = $(GSL_CFLAGS) $(CPPUNIT_CFLAGS)
+check_program_LIBS = $(GSL_LIBS) $(CPPUNIT_LIBS)
+check_program_LDFLAGS = $(GSL_LDFLAGS) $(CPPUNIT_LDFLAGS)
 
 endif

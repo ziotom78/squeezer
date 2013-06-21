@@ -35,6 +35,8 @@
 struct Data_container_t {
     std::vector<double> obt_times;
     std::vector<double> scet_times;
+    Radiometer_t radiometer;
+    uint16_t od;
 
     Data_container_t() {}
     virtual ~Data_container_t() {}
@@ -51,10 +53,7 @@ struct Data_container_t {
 #endif
 
     virtual void read_from_fits_file(const std::string & file_name) = 0;
-    virtual void write_to_fits_file(fitsfile * fptr,
-				    const Radiometer_t & radiometer,
-				    uint16_t od,
-				    int & status) = 0;
+    virtual void write_to_fits_file(fitsfile * fptr, int & status) = 0;
 };
 
 #endif
