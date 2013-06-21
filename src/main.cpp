@@ -90,7 +90,7 @@ compress_using_a_parameter_file(const std::string & file_name,
 		<< '\n';
     }
 
-    size_t num_of_processed_files;
+    size_t num_of_processed_files = 0;
     while(input_stream.good()) {
         std::string cur_line;
 	getline(input_stream, cur_line);
