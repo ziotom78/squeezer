@@ -51,7 +51,7 @@ struct Configuration_t {
 	std::stringstream ss(argv[1]);
 	ss >> user_nside;
 
-	if(! hpix_valid_nside(nside)) {
+	if(! hpix_valid_nside(user_nside)) {
 	    std::cerr << PROGRAM_NAME 
 		      << ": invalid value for NSIDE (" 
 		      << user_nside 
