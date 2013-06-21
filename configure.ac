@@ -18,8 +18,6 @@
 
 AC_INIT([squeezer], [1.0], [tomasi@lambrate.inaf.it])
 
-m4_include([m4/ax_cxx_compile_stdcxx_11.m4])
-
 AM_INIT_AUTOMAKE([-Wall -Werror foreign])
 
 ######################################################################
@@ -71,15 +69,9 @@ AM_CONDITIONAL([CPPUNIT_PRESENT], [test x$cppunit = xyes])
 ######################################################################
 # Check for the presence of HPixLib
 
-AC_CHECK_LIB([hpix], [hpix_valid_nside],
-	     [libhpix=yes AC_DEFINE(HAVE_HPIX, 1, [Define to 1 if you have HPixLib available])],
-             [libhpix=no])
-
-if test x$libhpix = xno; then
-   PKG_CHECK_MODULES([HPIXLIB], [libhpix],
-   	        [libhpix=yes AC_DEFINE(HAVE_HPIX, 1, [Define to 1 if you have HPixLib available])],
-                [libhpix=no])
-fi
+PKG_CHECK_MODULES([HPIXLIB], [libhpix],
+	    [libhpix=yes AC_DEFINE(HAVE_HPIX, 1, [Define to 1 if you have HPixLib available])],
+	    [libhpix=no])
 
 AM_CONDITIONAL(HPIXLIB_PRESENT, [test x$libhpix == xyes])
 AC_SUBST(HPIXLIB_CFLAGS)
