@@ -120,6 +120,11 @@ main(int argc, const char * argv[])
 
     hpix_map_t * hit_map = hpix_create_map(config.nside, HPIX_ORDER_SCHEME_RING);
 
+#ifdef HAVE_TOODI
+    ObjectHandle init_handle;
+    toodiInitializeLLIO("TOODI%file", &init_handle);
+#endif
+
     for(auto & detpoints_file : config.list_of_pointings) {
 
 	add_hits_from_pointings(hit_map, detpoints_file);
@@ -140,4 +145,8 @@ main(int argc, const char * argv[])
 	return 1;
 
     }
+
+#if HAVE_TOODI
+    toodiCloseLLIO(init_handle);
+#endif
 }
