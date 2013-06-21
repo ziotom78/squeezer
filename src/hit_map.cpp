@@ -23,6 +23,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
+#include <memory>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -71,19 +72,20 @@ void
 add_hits_from_pointings(hpix_map_t * map,
 			const std::string & input_file_name)
 {
-    Detector_pointings_t * detpoints;
+    std::unique_ptr<Detector_pointings_t> detpoints;
     Decompression_parameters_t params;
 
     std::cerr << PROGRAM_NAME << ": reading file " << input_file_name << "\n";
 
 #ifdef HAVE_TOODI
     if(input_file_name.substr(0, 6) == "TOODI%") {
-	detpoints.read_from_database(input_file_name);
+        detpoints.reset(new Detector_pointings_t());
+	detpoints->read_from_database(input_file_name);
     } else
 #endif
     {
 	FILE * input_file = std::fopen(input_file_name.c_str(), "rb");
-	detpoints = dynamic_cast<Detector_pointings_t *>(decompress_from_file(input_file, params));
+	detpoints.reset(dynamic_cast<Detector_pointings_t *>(decompress_from_file(input_file, params)));
 	std::fclose(input_file);
     }
 
