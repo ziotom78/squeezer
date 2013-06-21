@@ -37,8 +37,8 @@ hit_map_SOURCES = \
 	run_length_encoding.cpp \
 	hit_map.cpp
 
-hit_map_CPPFLAGS = $(HPIXLIB_CFLAGS)
-hit_map_LDADD = $(HPIXLIB_LIBS)
+hit_map_CPPFLAGS = $(GSL_CFLAGS) $(HPIXLIB_CFLAGS)
+hit_map_LDADD = $(GSL_LDFLAGS) $(HPIXLIB_LIBS)
 
 if TOODI_PRESENT
 
@@ -69,7 +69,7 @@ squeezer_SOURCES = \
 	statistics.cpp
 
 squeezer_CPPFLAGS = $(GSL_CFLAGS)
-squeezer_LIBS = $(GSL_LIBS)
+squeezer_LIBS = $(GSL_LDFLAGS)
 squeezer_LDFLAGS = $(GSL_LDFLAGS)
 
 if TOODI_PRESENT
