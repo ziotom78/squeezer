@@ -38,9 +38,25 @@ AC_CHECK_LIB(cfitsio, ffopen,, AC_MSG_ERROR(Cannot find the CFITSIO library.))
 ######################################################################
 # Check for the presence of GSL
 
+AC_PATH_PROG(GSL_CONFIG, gsl-config, no)
+
+if test "x$GSL_CONFIG" = "xno"; then
+   AC_MSG_NOTICE(gsl-config not found in path.)
+else			      
+   GSL_CFLAGS=`$GSL_CONFIG --cflags`
+   GSL_LDFLAGS=`$GSL_CONFIG --libs`
+
+   AC_SUBST(GSL_CFLAGS)
+   AC_SUBST(GSL_LDFLAGS)
+fi
+
 AC_CHECK_LIB([m],[cos])
-AC_CHECK_LIB([gslcblas],[cblas_dgemm])
-AC_CHECK_LIB([gsl],[gsl_blas_dgemm])
+AC_CHECK_LIB([gslcblas],[cblas_dgemm],,
+	[AC_MSG_ERROR(Cannot find the GSLCBLAS library.)],
+	[$GSL_LDFLAGS])
+AC_CHECK_LIB([gsl],[gsl_blas_dgemm],, 
+        [AC_MSG_ERROR(Cannot find the GSL library)],
+	[$GSL_LDFLAGS])
 
 ######################################################################
 # Check for the presence of CppUnit
@@ -63,20 +79,20 @@ AC_ARG_WITH([toodi-include-path],
 AC_ARG_WITH([toodi-lib-path],
 	[AC_HELP_STRING([--with-toodi-lib-path],
 	                [location of the TOODI library, defaults to $JW_LIB])],
-         [TOODI_LIBS="-L$withval -L$withval/client -L$withval/server -L$withval/native_threads -L$withval -ljwrapper -ljvm"],
-	 [TOODI_LIBS="-L$JW_LIB -L$JW_LIB/client -L$JW_LIB/server -L$JW_LIB/native_threads -L$JW_LIB -ljwrapper -ljvm"])
+         [TOODI_LDFLAGS="-L$withval -L$withval/client -L$withval/server -L$withval/native_threads -L$withval"],
+	 [TOODI_LDFLAGS="-L$JW_LIB -L$JW_LIB/client -L$JW_LIB/server -L$JW_LIB/native_threads -L$JW_LIB"])
 
 AC_MSG_CHECKING(for TOODI)
 if test x$JW_LIB != x ; then :
    AC_MSG_RESULT(the JW_LIB variable is set, this looks promising)
    CPPFLAGS="$CPPFLAGS $TOODI_CFLAGS"
-   LIBS="$LIBS $TOODI_LIBS"
+   LDFLAGS="$LDFLAGS $TOODI_LDFLAGS"
+   LIBS="$LIBS -ljwrapper -ljvm"
 
    AC_CHECK_LIB(jwrapper, toodiInitializeLLIO,
 	       [toodi=yes
 	       AC_DEFINE(HAVE_TOODI, 1, [Define to 1 if you are compiling on Ironthrone])],
-	       [toodi=no],
-	       [-ljvm])
+	       [toodi=no])
 else
    AC_MSG_RESULT(no)
    toodi=no

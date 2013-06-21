@@ -16,7 +16,8 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 # 02110-1301, USA.
 
-AM_CPPFLAGS = --pedantic
+AM_CPPFLAGS = -Wall --pedantic -g $(GSL_CFLAGS)
+LDFLAGS = $(GSL_LDFLAGS)
 
 bin_PROGRAMS = squeezer
 
