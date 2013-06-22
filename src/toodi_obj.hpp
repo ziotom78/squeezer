@@ -62,7 +62,7 @@ public:
 	toodiGetDoubleValues(object_handle, column_idx, 0, num_of_rows, vector.data());
     }
 
-    void read_column_of_uint32(const std::string & column_name,
+    void read_column_of_int32(const std::string & column_name,
 			       std::vector<uint32_t> & vector) {
         toodiInt32 column_idx;
 	toodiGetIndexOfColumn(object_handle, column_name.c_str(), &column_idx);
@@ -71,7 +71,8 @@ public:
 	toodiGetSizeOfColumn(object_handle, column_idx, &num_of_rows);
 
 	vector.resize(num_of_rows);
-	toodiGetUint32Values(object_handle, column_idx, 0, num_of_rows, vector.data());
+	toodiGetInt32Values(object_handle, column_idx, 0, num_of_rows, 
+			    reinterpret_cast<toodiInt32 *>(vector.data()));
     }
 };
 
