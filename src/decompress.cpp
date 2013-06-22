@@ -290,7 +290,7 @@ decompress_from_file(FILE * input_file,
 	break;
 
     case SQZ_DIFFERENCED_DATA:
-	file_data = new Differenced_data_t();
+	file_data = new Differenced_data_t(false);
 	break;
 
     default:

@@ -34,6 +34,7 @@ struct Compression_parameters_t {
     size_t elements_per_frame;
     unsigned int number_of_poly_terms;
     double max_abs_error;
+    bool read_calibrated_data;
     bool verbose_flag;
 
     Compression_parameters_t()
@@ -43,6 +44,7 @@ struct Compression_parameters_t {
 	  elements_per_frame(25),
 	  number_of_poly_terms(3),
 	  max_abs_error(10.0 / 3600.0 * M_PI / 180.0),
+	  read_calibrated_data(false),
 	  verbose_flag(false) {}
 };
 

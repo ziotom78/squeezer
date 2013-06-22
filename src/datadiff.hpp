@@ -37,6 +37,10 @@ struct Differenced_data_t : public Data_container_t {
     std::vector<double> sky_load;
     std::vector<uint32_t> quality_flags;
 
+    bool calibrated;
+
+    Differenced_data_t(bool a_calibrated) : calibrated(a_calibrated) {}
+
     virtual size_t number_of_columns() const { return 4; }
 
 #if HAVE_TOODI

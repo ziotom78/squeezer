@@ -460,7 +460,7 @@ compress_file_to_file(const std::string & input_file_name,
 	break;
 
     case SQZ_DIFFERENCED_DATA:
-	file_data.reset(new Differenced_data_t());
+	file_data.reset(new Differenced_data_t(params.read_calibrated_data));
 	break;
 
     default:

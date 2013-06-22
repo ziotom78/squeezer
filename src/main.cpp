@@ -155,6 +155,16 @@ run_compression_task(const std::vector<std::string> & list_of_arguments)
 	    params.file_type = SQZ_DIFFERENCED_DATA;
 	    cur_argument++;
 
+	} else if(list_of_arguments.at(cur_argument) == "--calibrated") {
+
+	    params.read_calibrated_data = true;
+	    cur_argument++;
+
+	} else if(list_of_arguments.at(cur_argument) == "--uncalibrated") {
+
+	    params.read_calibrated_data = false;
+	    cur_argument++;
+
 	} else if(list_of_arguments.at(cur_argument) == "-n") {
 
 	    std::stringstream ss(list_of_arguments.at(++cur_argument));
