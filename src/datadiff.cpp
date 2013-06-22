@@ -37,11 +37,17 @@ Differenced_data_t::read_from_database(const std::string & obj_name)
     toodiBeginTransaction(session);
 
     {
-        ToodiObject detpoint_obj(session, "toi.science.LFI_DataDiff", obj_name);
+	std::string obj_type;
+	if(calibrated)
+	    obj_type = "toi.science.LFI_DataDiffReduced";
+	else
+	    obj_type = "toi.science.LFI_DataDiff";
+
+        ToodiObject detpoint_obj(session, obj_type, obj_name);
 
 	detpoint_obj.read_column_of_double("sampleOBT", obt_times);
 	detpoint_obj.read_column_of_double("sampleSCET", scet_times);
-	detpoint_obj.read_column_of_double("sky_load", sky_load);
+	detpoint_obj.read_column_of_double("skyLoad", sky_load);
 	detpoint_obj.read_column_of_uint32("qualityFlag", quality_flags);
     }
 
