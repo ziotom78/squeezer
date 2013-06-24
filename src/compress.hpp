@@ -43,7 +43,7 @@ struct Compression_parameters_t {
 	  od_number(0),
 	  elements_per_frame(25),
 	  number_of_poly_terms(3),
-	  max_abs_error(10.0 / 3600.0 * M_PI / 180.0),
+	  max_abs_error(1.0 / 3600.0 * M_PI / 180.0),
 	  read_calibrated_data(false),
 	  verbose_flag(false) {}
 };
