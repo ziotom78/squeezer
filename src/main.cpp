@@ -275,6 +275,9 @@ run_decompression_task(const std::vector<std::string> & list_of_arguments)
 
 	} else {
 
+	    if(list_of_arguments.at(cur_argument) == "-")
+		break;
+
 	    std::cerr << PROGRAM_NAME
 		      << ": unknown flag \"" 
 		      << list_of_arguments.at(cur_argument) 
