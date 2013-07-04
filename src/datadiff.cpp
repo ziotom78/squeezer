@@ -126,9 +126,14 @@ Differenced_data_t::read_from_fits_file(const std::string & file_name)
     if(status != 0)
 	goto close_and_throw_error;
 
+    char radiometer_name[FLEN_KEYWORD];
+    fits_read_key_str(fptr, "EXTNAME", &radiometer_name[0], NULL, &status);
+    if(status != 0)
+	goto close_and_throw_error;
+
     if(read_double_vector_from_fits(fptr, num_of_rows, "OBT", obt_times) != 0 ||
        read_double_vector_from_fits(fptr, num_of_rows, "SCET", scet_times) != 0 ||
-       read_double_vector_from_fits(fptr, num_of_rows, "skyLoad", sky_load) != 0 ||
+       read_double_vector_from_fits(fptr, num_of_rows, radiometer_name, sky_load) != 0 ||
        read_uint32_vector_from_fits(fptr, num_of_rows, "flag", quality_flags) != 0)
 	goto close_and_throw_error;
 
@@ -159,7 +164,7 @@ Differenced_data_t::write_to_fits_file(fitsfile * fptr, int & status)
 {
     // Since we're going to use a few gotos, it is better to declare
     // all the variables before the first goto
-    char * ttype[] = { "OBT", "SCET", "skyLoad", "flags" };
+    char * ttype[] = { "OBT", "SCET", "LFIXXY", "flag" };
     char * tform[] = { "1D", "1D", "1D", "1J" };
     char * tunit[] = { "Clock ticks", "ms", "V", "dimensionless" };
 
@@ -170,6 +175,7 @@ Differenced_data_t::write_to_fits_file(fitsfile * fptr, int & status)
 
     char extname[30];
 
+    std::strncpy(ttype[2], radiometer.to_str().c_str(), 6);
     std::strncpy(extname, radiometer.to_str().c_str(), sizeof(extname));
     if(fits_create_tbl(fptr, BINARY_TBL, obt_times.size(), 4, 
 		       ttype, tform, tunit, extname, &status) != 0)
