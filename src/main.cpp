@@ -18,6 +18,8 @@
  * 02110-1301, USA.
  */
 
+#include "config.hpp"
+
 #include <assert.h>
 
 #include <iostream>
@@ -38,8 +40,6 @@
 #include "detpoint.hpp"
 #include "common_defs.hpp"
 #include "help.hpp"
-
-#include "config.hpp"
 
 //////////////////////////////////////////////////////////////////////
 

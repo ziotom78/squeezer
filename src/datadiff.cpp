@@ -48,7 +48,7 @@ Differenced_data_t::read_from_database(const std::string & obj_name)
 	detpoint_obj.read_column_of_double("sampleOBT", obt_times);
 	detpoint_obj.read_column_of_double("sampleSCET", scet_times);
 	detpoint_obj.read_column_of_double("skyLoad", sky_load);
-	detpoint_obj.read_column_of_uint32("qualityFlag", quality_flags);
+	detpoint_obj.read_column_of_int32("qualityFlag", quality_flags);
     }
 
     toodiCommitTransaction(session);
