@@ -164,7 +164,7 @@ Differenced_data_t::write_to_fits_file(fitsfile * fptr, int & status)
 {
     // Since we're going to use a few gotos, it is better to declare
     // all the variables before the first goto
-    char * ttype[] = { "OBT", "SCET", "LFIXXY", "flag" };
+    std::vector<char *> ttype { "OBT", "SCET", "", "FLAG" };
     char * tform[] = { "1D", "1D", "1D", "1J" };
     char * tunit[] = { "Clock ticks", "ms", "V", "dimensionless" };
 
@@ -175,10 +175,11 @@ Differenced_data_t::write_to_fits_file(fitsfile * fptr, int & status)
 
     char extname[30];
 
-    std::strncpy(ttype[2], radiometer.to_str().c_str(), 6);
+    ttype[2] = (char *) alloca(12);
+    std::strncpy(ttype[2], radiometer.to_str().c_str(), 12);
     std::strncpy(extname, radiometer.to_str().c_str(), sizeof(extname));
     if(fits_create_tbl(fptr, BINARY_TBL, obt_times.size(), 4, 
-		       ttype, tform, tunit, extname, &status) != 0)
+		       ttype.data(), tform, tunit, extname, &status) != 0)
 	return;
 
     std::vector<unsigned long> ulong_flags;
