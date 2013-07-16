@@ -77,7 +77,7 @@ read_double_vector_from_fits(fitsfile * fptr,
 
 //////////////////////////////////////////////////////////////////////
 
-int
+static int
 load_data(long total_num,
 	  long offset,
 	  long first_num,
@@ -170,7 +170,7 @@ throw_error:
 
 //////////////////////////////////////////////////////////////////////
 
-int
+static int
 save_data(long total_num,
 	  long offset,
 	  long first_num,
@@ -248,11 +248,11 @@ Detector_pointings_t::write_to_fits_file(fitsfile * fptr, int & status)
     {
 	iteratorCol cols[5];
 	int n_cols = 5;
-	fits_iter_set_by_name(&cols[0], fptr, (char *) "OBT",   TDOUBLE, OutputCol);
-	fits_iter_set_by_name(&cols[1], fptr, (char *) "SCET",  TDOUBLE, OutputCol);
-	fits_iter_set_by_name(&cols[2], fptr, (char *) "THETA", TDOUBLE, OutputCol);
-	fits_iter_set_by_name(&cols[3], fptr, (char *) "PHI",   TDOUBLE, OutputCol);
-	fits_iter_set_by_name(&cols[4], fptr, (char *) "PSI",   TDOUBLE, OutputCol);
+	fits_iter_set_by_num(&cols[0], fptr, 1, TDOUBLE, OutputCol);
+	fits_iter_set_by_num(&cols[1], fptr, 2, TDOUBLE, OutputCol);
+	fits_iter_set_by_num(&cols[2], fptr, 3, TDOUBLE, OutputCol);
+	fits_iter_set_by_num(&cols[3], fptr, 4, TDOUBLE, OutputCol);
+	fits_iter_set_by_num(&cols[4], fptr, 5, TDOUBLE, OutputCol);
 
 	fits_iterate_data(n_cols, cols, 0, 0, &save_data, this, &status);
     }

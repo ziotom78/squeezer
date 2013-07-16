@@ -19,6 +19,7 @@
  */
 
 #include <fitsio.h>
+#include <algorithm>
 #include <cstring>
 
 #include "common_defs.hpp"
@@ -59,54 +60,33 @@ Differenced_data_t::read_from_database(const std::string & obj_name)
 //////////////////////////////////////////////////////////////////////
 
 static int
-read_double_vector_from_fits(fitsfile * fptr,
-			     LONGLONG num_of_rows,
-			     const std::string & column_name,
-			     std::vector<double> & vector)
+load_data(long total_num,
+	  long offset,
+	  long first_num,
+	  long num_of_values,
+	  int num_of_arrays,
+	  iteratorCol * data,
+	  void * user_ptr)
 {
-    vector.resize(num_of_rows);
+    auto datadiff = reinterpret_cast<Differenced_data_t *>(user_ptr);
 
-    int status = 0;
-    int column_number = 0;
-    char * column_name_asciiz = strdup(column_name.c_str());
-    fits_get_colnum(fptr, CASEINSEN, column_name_asciiz, 
-		    &column_number, &status);
-    free(column_name_asciiz);
+    std::copy_n(((double *) data[0].array) + 1,
+		num_of_values,
+		datadiff->obt_times.data() + first_num - 1);
 
-    fits_read_col(fptr, TDOUBLE, column_number,
-		  1, 1, num_of_rows, NULL,
-		  vector.data(), NULL, &status);
-    return status;
-}
+    std::copy_n(((double *) data[1].array) + 1,
+		num_of_values,
+		datadiff->scet_times.data() + first_num - 1);
 
-//////////////////////////////////////////////////////////////////////
+    std::copy_n(((double *) data[2].array) + 1,
+		num_of_values,
+		datadiff->sky_load.data() + first_num - 1);
 
-static int
-read_uint32_vector_from_fits(fitsfile * fptr,
-			     LONGLONG num_of_rows,
-			     const std::string & column_name,
-			     std::vector<uint32_t> & vector)
-{
-    int status = 0;
-    int column_number = 0;
-    char * column_name_asciiz = strdup(column_name.c_str());
-    fits_get_colnum(fptr, CASEINSEN, column_name_asciiz, 
-		    &column_number, &status);
-    free(column_name_asciiz);
+    std::copy_n(((unsigned long *) data[3].array) + 1,
+		num_of_values,
+		datadiff->quality_flags.data() + first_num - 1);
 
-    std::vector<unsigned long> long_vector;
-    long_vector.resize(num_of_rows);
-    fits_read_col_ulng(fptr, column_number,
-		       1, 1, num_of_rows, 0UL,
-		       long_vector.data(), NULL, &status);
-
-    if(status == 0) {
-	vector.resize(num_of_rows);
-	std::copy(long_vector.begin(), long_vector.end(),
-		  vector.begin());
-    }
-
-    return status;
+    return 0;
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -131,10 +111,22 @@ Differenced_data_t::read_from_fits_file(const std::string & file_name)
     if(status != 0)
 	goto close_and_throw_error;
 
-    if(read_double_vector_from_fits(fptr, num_of_rows, "OBT", obt_times) != 0 ||
-       read_double_vector_from_fits(fptr, num_of_rows, "SCET", scet_times) != 0 ||
-       read_double_vector_from_fits(fptr, num_of_rows, radiometer_name, sky_load) != 0 ||
-       read_uint32_vector_from_fits(fptr, num_of_rows, "flag", quality_flags) != 0)
+    obt_times.resize(num_of_rows);
+    scet_times.resize(num_of_rows);
+    sky_load.resize(num_of_rows);
+    quality_flags.resize(num_of_rows);
+
+    {
+	iteratorCol cols[4];
+	int n_cols = 4;
+	fits_iter_set_by_name(&cols[0], fptr, (char *) "OBT", TDOUBLE, InputCol);
+	fits_iter_set_by_name(&cols[1], fptr, (char *) "SCET", TDOUBLE, InputCol);
+	fits_iter_set_by_name(&cols[2], fptr, (char *) radiometer_name, TDOUBLE, InputCol);
+	fits_iter_set_by_name(&cols[3], fptr, (char *) "flag", TULONG, InputCol);
+
+	fits_iterate_data(n_cols, cols, 0, 0, &load_data, this, &status);
+    }
+    if(status != 0)
 	goto close_and_throw_error;
 
     fits_close_file(fptr, &status);
@@ -159,14 +151,60 @@ throw_error:
 
 //////////////////////////////////////////////////////////////////////
 
+static int
+save_data(long total_num,
+	  long offset,
+	  long first_num,
+	  long num_of_values,
+	  int num_of_arrays,
+	  iteratorCol * data,
+	  void * user_ptr)
+{
+    auto datadiff = reinterpret_cast<Differenced_data_t *>(user_ptr);
+
+    ((double *) data[0].array)[0] = DOUBLENULLVALUE;
+    ((double *) data[1].array)[0] = DOUBLENULLVALUE;
+    ((double *) data[2].array)[0] = DOUBLENULLVALUE;
+    ((unsigned long *) data[3].array)[0] = 0;
+
+    std::copy_n(datadiff->obt_times.data() + first_num - 1,
+		num_of_values,
+		((double *) data[0].array) + 1);
+
+    std::copy_n(datadiff->scet_times.data() + first_num - 1,
+		num_of_values,
+		((double *) data[1].array) + 1);
+
+    std::copy_n(datadiff->sky_load.data() + first_num - 1,
+		num_of_values,
+		((double *) data[2].array) + 1);
+
+    std::copy_n(datadiff->quality_flags.data() + first_num - 1,
+		num_of_values,
+		((unsigned long *) data[3].array) + 1);
+
+    return 0;
+}
+
+//////////////////////////////////////////////////////////////////////
+
 void
 Differenced_data_t::write_to_fits_file(fitsfile * fptr, int & status)
 {
     // Since we're going to use a few gotos, it is better to declare
     // all the variables before the first goto
-    std::vector<char *> ttype { "OBT", "SCET", "", "FLAG" };
-    char * tform[] = { "1D", "1D", "1D", "1J" };
-    char * tunit[] = { "Clock ticks", "ms", "V", "dimensionless" };
+    std::vector<char *> ttype { (char *) "OBT", 
+                                (char *) "SCET", 
+                                (char *) "",
+                                (char *) "FLAG" };
+    char * tform[] = { (char *) "1D", 
+		       (char *) "1D", 
+		       (char *) "1D", 
+		       (char *) "1J" };
+    char * tunit[] = { (char *) "Clock ticks", 
+		       (char *) "ms", 
+		       (char *) "V", 
+		       (char *) "dimensionless" };
 
     double firstobt = obt_times.front();
     double lastobt = obt_times.back();
@@ -182,19 +220,17 @@ Differenced_data_t::write_to_fits_file(fitsfile * fptr, int & status)
 		       ttype.data(), tform, tunit, extname, &status) != 0)
 	return;
 
-    std::vector<unsigned long> ulong_flags;
-    ulong_flags.resize(quality_flags.size());
-    std::copy(quality_flags.begin(), quality_flags.end(),
-	      ulong_flags.begin());
+    {
+	iteratorCol cols[4];
+	int n_cols = 4;
+	fits_iter_set_by_num(&cols[0], fptr, 1, TDOUBLE, OutputCol);
+	fits_iter_set_by_num(&cols[1], fptr, 2, TDOUBLE, OutputCol);
+	fits_iter_set_by_num(&cols[2], fptr, 3, TDOUBLE, OutputCol);
+	fits_iter_set_by_num(&cols[3], fptr, 4, TULONG, OutputCol);
 
-    if(fits_write_col(fptr, TDOUBLE, 1, 1, 1, 
-		      obt_times.size(), obt_times.data(), &status) != 0 ||
-       fits_write_col(fptr, TDOUBLE, 2, 1, 1, 
-		      scet_times.size(), scet_times.data(), &status) != 0 ||
-       fits_write_col(fptr, TDOUBLE, 3, 1, 1, 
-		      sky_load.size(), sky_load.data(), &status) != 0 ||
-       fits_write_col(fptr, TULONG, 4, 1, 1, 
-		      ulong_flags.size(), ulong_flags.data(), &status) != 0)
+	fits_iterate_data(n_cols, cols, 0, 0, &save_data, this, &status);
+    }
+    if(status != 0)
 	return;
 
     if(fits_write_key(fptr, TDOUBLE, "FIRSTOBT", 
