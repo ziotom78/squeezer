@@ -25,6 +25,7 @@ AM_INIT_AUTOMAKE([-Wall -Werror foreign])
 
 AC_PROG_CC
 AC_PROG_CXX
+AC_PROG_LIBTOOL
 
 AX_CXX_COMPILE_STDCXX_11(,mandatory)
 
@@ -40,22 +41,23 @@ LIBS="$LIBS -lz -lpthread"
 AC_PATH_PROG(GSL_CONFIG, gsl-config, no)
 
 if test "x$GSL_CONFIG" = "xno"; then
-   AC_MSG_NOTICE(gsl-config not found in path.)
+   AC_MSG_ERROR(Cannot configure GSL: gsl-config not found in path.)
 else
    GSL_CFLAGS=`$GSL_CONFIG --cflags`
    GSL_LDFLAGS=`$GSL_CONFIG --libs`
 
+   LDFLAGS="$GSL_LDFLAGS $LDFLAGS"
    AC_SUBST(GSL_CFLAGS)
    AC_SUBST(GSL_LDFLAGS)
 fi
 
-AC_CHECK_LIB([m],[cos])
-AC_CHECK_LIB([gslcblas],[cblas_dgemm],,
-	[AC_MSG_ERROR(Cannot find the GSLCBLAS library.)],
-	[$GSL_LDFLAGS])
-AC_CHECK_LIB([gsl],[gsl_blas_dgemm],,
-        [AC_MSG_ERROR(Cannot find the GSL library)],
-	[$GSL_LDFLAGS])
+#AC_CHECK_LIB([m],[cos])
+#AC_CHECK_LIB([gslcblas],[cblas_dgemm],,
+#	[AC_MSG_ERROR(Cannot find the GSLCBLAS library.)],
+#	[$GSL_LDFLAGS])
+#AC_CHECK_LIB([gsl],[gsl_blas_dgemm],,
+#        [AC_MSG_ERROR(Cannot find the GSL library)],
+#	[$GSL_LDFLAGS])
 
 ######################################################################
 # Check for the presence of CppUnit
