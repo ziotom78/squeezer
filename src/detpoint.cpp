@@ -19,6 +19,7 @@
  */
 
 #include <fitsio.h>
+#include <algorithm>
 #include <cstring>
 
 #include "common_defs.hpp"
@@ -76,6 +77,42 @@ read_double_vector_from_fits(fitsfile * fptr,
 
 //////////////////////////////////////////////////////////////////////
 
+int
+load_data(long total_num,
+	  long offset,
+	  long first_num,
+	  long num_of_values,
+	  int num_of_arrays,
+	  iteratorCol * data,
+	  void * user_ptr)
+{
+    auto pointings = reinterpret_cast<Detector_pointings_t *>(user_ptr);
+
+    std::copy_n(((double *) data[0].array) + 1,
+		num_of_values,
+		pointings->obt_times.data() + first_num - 1);
+
+    std::copy_n(((double *) data[1].array) + 1,
+		num_of_values,
+		pointings->scet_times.data() + first_num - 1);
+
+    std::copy_n(((double *) data[2].array) + 1,
+		num_of_values,
+		pointings->theta.data() + first_num - 1);
+
+    std::copy_n(((double *) data[3].array) + 1,
+		num_of_values,
+		pointings->phi.data() + first_num - 1);
+
+    std::copy_n(((double *) data[4].array) + 1,
+		num_of_values,
+		pointings->psi.data() + first_num - 1);
+
+    return 0;
+}
+
+//////////////////////////////////////////////////////////////////////
+
 void
 Detector_pointings_t::read_from_fits_file(const std::string & file_name)
 {
@@ -91,11 +128,24 @@ Detector_pointings_t::read_from_fits_file(const std::string & file_name)
     if(status != 0)
 	goto close_and_throw_error;
 
-    if(read_double_vector_from_fits(fptr, num_of_rows, "OBT", obt_times) != 0 ||
-       read_double_vector_from_fits(fptr, num_of_rows, "SCET", scet_times) != 0 ||
-       read_double_vector_from_fits(fptr, num_of_rows, "THETA", theta) != 0 ||
-       read_double_vector_from_fits(fptr, num_of_rows, "PHI", phi) != 0 ||
-       read_double_vector_from_fits(fptr, num_of_rows, "PSI", psi) != 0)
+    obt_times.resize(num_of_rows);
+    scet_times.resize(num_of_rows);
+    theta.resize(num_of_rows);
+    phi.resize(num_of_rows);
+    psi.resize(num_of_rows);
+
+    {
+	iteratorCol cols[5];
+	int n_cols = 5;
+	fits_iter_set_by_name(&cols[0], fptr, (char *) "OBT",   TDOUBLE, InputCol);
+	fits_iter_set_by_name(&cols[1], fptr, (char *) "SCET",  TDOUBLE, InputCol);
+	fits_iter_set_by_name(&cols[2], fptr, (char *) "THETA", TDOUBLE, InputCol);
+	fits_iter_set_by_name(&cols[3], fptr, (char *) "PHI",   TDOUBLE, InputCol);
+	fits_iter_set_by_name(&cols[4], fptr, (char *) "PSI",   TDOUBLE, InputCol);
+
+	fits_iterate_data(n_cols, cols, 0, 0, &load_data, this, &status);
+    }
+    if(status != 0)
 	goto close_and_throw_error;
 
     fits_close_file(fptr, &status);
@@ -120,14 +170,68 @@ throw_error:
 
 //////////////////////////////////////////////////////////////////////
 
+int
+save_data(long total_num,
+	  long offset,
+	  long first_num,
+	  long num_of_values,
+	  int num_of_arrays,
+	  iteratorCol * data,
+	  void * user_ptr)
+{
+    auto pointings = reinterpret_cast<Detector_pointings_t *>(user_ptr);
+
+    ((double *) data[0].array)[0] = DOUBLENULLVALUE;
+    ((double *) data[1].array)[0] = DOUBLENULLVALUE;
+    ((double *) data[2].array)[0] = DOUBLENULLVALUE;
+    ((double *) data[3].array)[0] = DOUBLENULLVALUE;
+    ((double *) data[4].array)[0] = DOUBLENULLVALUE;
+
+    std::copy_n(pointings->obt_times.data() + first_num - 1,
+		num_of_values,
+		((double *) data[0].array) + 1);
+
+    std::copy_n(pointings->scet_times.data() + first_num - 1,
+		num_of_values,
+		((double *) data[1].array) + 1);
+
+    std::copy_n(pointings->theta.data() + first_num - 1,
+		num_of_values,
+		((double *) data[2].array) + 1);
+
+    std::copy_n(pointings->phi.data() + first_num - 1,
+		num_of_values,
+		((double *) data[3].array) + 1);
+
+    std::copy_n(pointings->psi.data() + first_num - 1,
+		num_of_values,
+		((double *) data[4].array) + 1);
+
+    return 0;
+}
+
+//////////////////////////////////////////////////////////////////////
+
 void
 Detector_pointings_t::write_to_fits_file(fitsfile * fptr, int & status)
 {
     // Since we're going to use a few gotos, it is better to declare
     // all the variables before the first goto
-    char * ttype[] = { "OBT", "SCET", "THETA", "PHI", "PSI" };
-    char * tform[] = { "1D", "1D", "1D", "1D", "1D" };
-    char * tunit[] = { "Clock ticks", "ms", "rad", "rad", "rad" };
+    char * ttype[] = { (char *) "OBT", 
+		       (char *) "SCET", 
+		       (char *) "THETA", 
+		       (char *) "PHI", 
+		       (char *) "PSI" };
+    char * tform[] = { (char *) "1D", 
+		       (char *) "1D", 
+		       (char *) "1D", 
+		       (char *) "1D", 
+		       (char *) "1D" };
+    char * tunit[] = { (char *) "Clock ticks", 
+		       (char *) "ms", 
+		       (char *) "rad", 
+		       (char *) "rad", 
+		       (char *) "rad" };
 
     double firstobt = obt_times.front();
     double lastobt = obt_times.back();
@@ -141,16 +245,18 @@ Detector_pointings_t::write_to_fits_file(fitsfile * fptr, int & status)
 		       ttype, tform, tunit, extname, &status) != 0)
 	return;
 
-    if(fits_write_col(fptr, TDOUBLE, 1, 1, 1, 
-		      obt_times.size(), obt_times.data(), &status) != 0 ||
-       fits_write_col(fptr, TDOUBLE, 2, 1, 1, 
-		      scet_times.size(), scet_times.data(), &status) != 0 ||
-       fits_write_col(fptr, TDOUBLE, 3, 1, 1, 
-		      theta.size(), theta.data(), &status) != 0 ||
-       fits_write_col(fptr, TDOUBLE, 4, 1, 1, 
-		      phi.size(), phi.data(), &status) != 0 ||
-       fits_write_col(fptr, TDOUBLE, 5, 1, 1, 
-		      psi.size(), psi.data(), &status) != 0)
+    {
+	iteratorCol cols[5];
+	int n_cols = 5;
+	fits_iter_set_by_name(&cols[0], fptr, (char *) "OBT",   TDOUBLE, OutputCol);
+	fits_iter_set_by_name(&cols[1], fptr, (char *) "SCET",  TDOUBLE, OutputCol);
+	fits_iter_set_by_name(&cols[2], fptr, (char *) "THETA", TDOUBLE, OutputCol);
+	fits_iter_set_by_name(&cols[3], fptr, (char *) "PHI",   TDOUBLE, OutputCol);
+	fits_iter_set_by_name(&cols[4], fptr, (char *) "PSI",   TDOUBLE, OutputCol);
+
+	fits_iterate_data(n_cols, cols, 0, 0, &save_data, this, &status);
+    }
+    if(status != 0)
 	return;
 
     if(fits_write_key(fptr, TDOUBLE, "FIRSTOBT", 
